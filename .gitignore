@@ -1,0 +1,10 @@
+/breadmachine-api
+
+# Go build cache & temporary files
+*.exe
+*.out
+*.log
+*.test
+*.tmp
+*.swp
+*.DS_Store
