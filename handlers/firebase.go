@@ -6,17 +6,24 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"firebase.google.com/go"
+	"firebase.google.com/go/auth"
 	"google.golang.org/api/option"
 
 	"github.com/RedBrand88/breadmachine/models"
 )
 
 var client *firestore.Client
+var authClient *auth.Client
 
 // InitFirebase initializes the Firebase Firestore client
 func InitFirebase() error {
 	opt := option.WithCredentialsFile("/etc/breadmachine/serviceAccountKey.json")
 	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		return err
+	}
+
+	authClient, err = app.Auth(context.Background())
 	if err != nil {
 		return err
 	}

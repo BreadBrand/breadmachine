@@ -22,6 +22,7 @@ type Recipe struct {
 	Ingredients  []Ingredient `json:"ingredients" firestore:"ingredients"`
 	Instructions []string     `json:"instructions" firestore:"instructions"`
 	Percentages  []Percentage `json:"percentages" firestore:"percentages"`
+	UserID			 string				`json:"userId,omitempty" firestore:"userId,omitempty"`
 }
 
 //CalculateBakersPercentages computes percentages based on flour weight

@@ -22,22 +22,50 @@ func GetAllRecipes(w http.ResponseWriter, r *http.Request) {
 
 //CreateRecipe handles recipe creation
 func CreateRecipe(w http.ResponseWriter, r *http.Request) {
+	// Get Authorization header
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	// Expect "Bearer <token>"
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	tokenString = strings.TrimSpace(tokenString)
+	if tokenString == "" {
+		http.Error(w, "Invalid Authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	// Verify the Firebase ID token
+	token, err := authClient.VerifyIDToken(r.Context(), tokenString)
+	if err != nil {
+		http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+		return
+	}
+
 	var recipe models.Recipe
 
+	// Decode the JSON body
 	if err := json.NewDecoder(r.Body).Decode(&recipe); err != nil {
 		http.Error(w, "Invalid input", http.StatusBadRequest)
 		return
 	}
 
-	//Calculate Baker's Percentages before saving
+	// Set the UserID from the verified token
+	recipe.UserID = token.UID
+
+	// Calculate baker's percentages
 	recipe.CalculateBakersPercentages()
 
-	_, err := SaveRecipe(recipe)
+	// Save to Firestore
+	_, err = SaveRecipe(recipe)
 	if err != nil {
 		http.Error(w, "Failed to save recipe", http.StatusInternalServerError)
 		return
 	}
 
+	// Return the created recipe
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(recipe)
 }
