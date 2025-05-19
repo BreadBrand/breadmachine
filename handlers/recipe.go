@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/RedBrand88/breadmachine/models"
+	"github.com/google/uuid"
 )
 
-//GetAllRecipes returns all recipes from Firestore
+// GetAllRecipes returns all recipes from Firestore
 func GetAllRecipes(w http.ResponseWriter, r *http.Request) {
 	recipes, err := FetchAllRecipesFromFirebase()
 	if err != nil {
@@ -20,7 +22,7 @@ func GetAllRecipes(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(recipes)
 }
 
-//CreateRecipe handles recipe creation
+// CreateRecipe handles recipe creation
 func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	// Get Authorization header
 	authHeader := r.Header.Get("Authorization")
@@ -52,28 +54,47 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Assign Firestore-generated ID for this recipe
+	docRef := client.Collection("Recipes").NewDoc()
+	recipe.ID = docRef.ID
+
 	// Set the UserID from the verified token
 	recipe.UserID = token.UID
 
-	// Calculate baker's percentages
-	recipe.CalculateBakersPercentages()
+	// Sum total dough and generate IDs for each ingredient
+	totalDough := 0.0
+	for i := range recipe.Ingredients {
+		totalDough += recipe.Ingredients[i].Quantity
+		if recipe.Ingredients[i].ID == "" {
+			recipe.Ingredients[i].ID = uuid.NewString()
+		}
+	}
 
-	// Save to Firestore
-	_, err = SaveRecipe(recipe)
-	if err != nil {
+	// Populate Meta data
+	now := time.Now()
+	recipe.Meta = models.Meta{
+		YieldGrams: totalDough,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}
+
+	// Calculate baker's percentages into each ingredient
+	recipe.CalculateBakerPercentages()
+
+	// Persist the recipe document to Firestore
+	if _, err := docRef.Set(r.Context(), recipe); err != nil {
 		http.Error(w, "Failed to save recipe", http.StatusInternalServerError)
 		return
 	}
 
-	// Return the created recipe
+	// Return the created recipe (with ID and computed fields)
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(recipe)
 }
 
-// RecipeHandler processes both GET and DELETE requests for a single recipe
+// RecipeHandler processes GET and DELETE for a single recipe
 func RecipeHandler(w http.ResponseWriter, r *http.Request) {
 	id := strings.TrimPrefix(r.URL.Path, "/recipes/")
-
 	if id == "" {
 		http.Error(w, "Missing recipe ID", http.StatusBadRequest)
 		return
@@ -82,22 +103,23 @@ func RecipeHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		docRef := client.Collection("Recipes").Doc(id)
-		doc, err := docRef.Get(r.Context())
-		if err != nil || !doc.Exists() {
+		docSnap, err := docRef.Get(r.Context())
+		if err != nil || !docSnap.Exists() {
 			http.Error(w, "Recipe not found", http.StatusNotFound)
 			return
 		}
 
 		var recipe models.Recipe
-		doc.DataTo(&recipe)
-
+		if err := docSnap.DataTo(&recipe); err != nil {
+			http.Error(w, "Error parsing recipe", http.StatusInternalServerError)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(recipe)
 
 	case "DELETE":
 		docRef := client.Collection("Recipes").Doc(id)
-		_, err := docRef.Delete(r.Context())
-		if err != nil {
+		if _, err := docRef.Delete(r.Context()); err != nil {
 			http.Error(w, "Recipe not found", http.StatusNotFound)
 			return
 		}
@@ -107,4 +129,15 @@ func RecipeHandler(w http.ResponseWriter, r *http.Request) {
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
+}
+
+func RecipesHandler(w http.ResponseWriter, r *http.Request) {
+  switch r.Method {
+  case http.MethodGet:
+    GetAllRecipes(w, r)
+  case http.MethodPost:
+    CreateRecipe(w, r)
+  default:
+    http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+  }
 }

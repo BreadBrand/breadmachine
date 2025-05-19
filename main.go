@@ -18,9 +18,8 @@ func main() {
 	}
 
 	//define API routes
-	http.HandleFunc("/recipes", handlers.GetAllRecipes)
+	http.HandleFunc("/recipes", handlers.RecipesHandler)
 	http.HandleFunc("/recipes/", handlers.RecipeHandler)
-	http.HandleFunc("/recipes/create", handlers.CreateRecipe)
 
 	//start the server
 	log.Println("server is running on port 8080...")
