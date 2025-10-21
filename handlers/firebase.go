@@ -58,6 +58,7 @@ func FetchAllRecipesFromFirebase() ([]models.Recipe, error) {
 		}
 		var recipe models.Recipe
 		doc.DataTo(&recipe)
+		recipe.ID = doc.Ref.ID
 		recipes = append(recipes, recipe)
 	}
 	return recipes, nil
