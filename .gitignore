@@ -1,5 +1,6 @@
 /breadmachine-api
 
+*.sh
 # Go build cache & temporary files
 *.exe
 *.out

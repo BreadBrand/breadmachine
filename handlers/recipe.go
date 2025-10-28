@@ -57,18 +57,11 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	// Assign Firestore-generated ID for this recipe
 	docRef := client.Collection("Recipes").NewDoc()
 	recipe.ID = docRef.ID
-
-	// Set the UserID from the verified token
 	recipe.UserID = token.UID
 
 	// Sum total dough and generate IDs for each ingredient
-	totalDough := 0.0
-	for i := range recipe.Ingredients {
-		totalDough += recipe.Ingredients[i].Quantity
-		if recipe.Ingredients[i].ID == "" {
-			recipe.Ingredients[i].ID = uuid.NewString()
-		}
-	}
+	totalDough, normalized := normalizeIngredients(recipe.Ingredients)
+	recipe.Ingredients = normalized
 
 	// Populate Meta data
 	now := time.Now()
@@ -131,13 +124,37 @@ func RecipeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func normalizeIngredients(ingredients []models.Ingredient) (float64, []models.Ingredient) {
+	totalDough := 0.0
+
+	for i := range ingredients {
+		ing := &ingredients[i]
+
+		if ing.ID == "" {
+			ing.ID = uuid.NewString()
+		}
+
+		unit := strings.ToLower(ing.Unit)
+
+		if ing.Grams == 0 && ing.Quantity > 0 {
+			mult := unitToGrams[unit]
+			if mult == 0 {
+				mult = 1
+			}
+			ing.Grams = ing.Quantity * mult
+		}
+		totalDough += ing.Grams
+	}
+	return totalDough, ingredients
+}
+
 func RecipesHandler(w http.ResponseWriter, r *http.Request) {
-  switch r.Method {
-  case http.MethodGet:
-    GetAllRecipes(w, r)
-  case http.MethodPost:
-    CreateRecipe(w, r)
-  default:
-    http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-  }
+	switch r.Method {
+	case http.MethodGet:
+		GetAllRecipes(w, r)
+	case http.MethodPost:
+		CreateRecipe(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
 }
