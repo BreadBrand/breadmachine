@@ -46,13 +46,13 @@ func TestParseRecipeText(t *testing.T) {
 	}
 
 	expectedIngredients := []models.Ingredient{
-		{IngredientName: "bread flour (about 3 Tbsp)", Quantity: 25, Unit: "g", Phase: "tangzhong"},
-		{IngredientName: "(125g) water", Quantity: 0.5, Unit: "cup", Phase: "tangzhong"},
-		{IngredientName: "bread flour", Quantity: 475, Unit: "g", Phase: "dough"},
-		{IngredientName: "sugar", Quantity: 1, Unit: "Tbsp", Phase: "dough"},
-		{IngredientName: "starter", Quantity: 2, Unit: "Tbsp", Phase: "dough"},
-		{IngredientName: "milk", Quantity: 1.5, Unit: "cups", Phase: "dough"},
-		{IngredientName: "barley", Quantity: 1.33, Unit: "cups", Phase: "dough"},
+		{IngredientName: "bread flour (about 3 Tbsp)", Quantity: 25, Unit: "g", Grams: 25, Phase: "tangzhong"},
+		{IngredientName: "(125g) water", Quantity: 0.5, Unit: "cup", Grams: 120, Phase: "tangzhong"},
+		{IngredientName: "bread flour", Quantity: 475, Unit: "g", Grams: 475, Phase: "dough"},
+		{IngredientName: "sugar", Quantity: 1, Unit: "Tbsp", Grams: 15, Phase: "dough"},
+		{IngredientName: "starter", Quantity: 2, Unit: "Tbsp", Grams: 30, Phase: "dough"},
+		{IngredientName: "milk", Quantity: 1.5, Unit: "cups", Grams: 360, Phase: "dough"},
+		{IngredientName: "barley", Quantity: 1.33, Unit: "cups", Grams: 320, Phase: "dough"},
 	}
 	// Ingredient count
 	if len(recipe.Ingredients) != len(expectedIngredients) {
@@ -77,6 +77,11 @@ func TestParseRecipeText(t *testing.T) {
 		diff := got.Quantity - exp.Quantity
 		if diff < -0.01 || diff > 0.01 {
 			t.Errorf("ingredient %d quantity mismatch: expected %.3f, got %.3f", i, exp.Quantity, got.Quantity)
+		}
+
+		grams_diff := got.Grams - exp.Grams
+		if grams_diff < -0.01 || grams_diff > 0.01 {
+			t.Errorf("ingredient %d grams mismatch: expected %.2f, got %.2f", i, exp.Grams, got.Grams)
 		}
 	}
 

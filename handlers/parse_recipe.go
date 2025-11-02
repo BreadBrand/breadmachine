@@ -84,7 +84,7 @@ func ParseRecipeText(raw string) models.Recipe {
 
 		// Match sub-header like "[dough]"
 		if match := subHeaderRegex.FindStringSubmatch(line); match != nil {
-			currentSubHeader = match[1]
+			currentSubHeader = strings.ToLower(match[1])
 			continue
 		}
 
@@ -133,11 +133,15 @@ func parseIngredientLine(line string, phase models.Phase) models.Ingredient {
 	//}
 	//so I can use matches
 	qty := parseNumber(strings.TrimSpace(matches[1]))
+	unit := strings.ToLower(matches[2])
+	mult := unitToGrams[unit]
+	grams := qty * mult
 
 	ing := models.Ingredient{
 		IngredientName: matches[3],
 		Quantity: qty,
 		Unit: matches[2],
+		Grams: grams,
 		Phase: phase,
 	}
 	return ing
