@@ -34,6 +34,7 @@ func TestParseRecipeText(t *testing.T) {
 	`
 
 	recipe := ParseRecipeText(input)
+	recipe.CalculateBakerPercentages()
 
 	// Title
 	if recipe.Title != "Sour Dough Discard Cinnamon Rolls" {
@@ -46,13 +47,13 @@ func TestParseRecipeText(t *testing.T) {
 	}
 
 	expectedIngredients := []models.Ingredient{
-		{IngredientName: "bread flour (about 3 Tbsp)", Quantity: 25, Unit: "g", Grams: 25, Phase: "tangzhong"},
-		{IngredientName: "(125g) water", Quantity: 0.5, Unit: "cup", Grams: 120, Phase: "tangzhong"},
-		{IngredientName: "bread flour", Quantity: 475, Unit: "g", Grams: 475, Phase: "dough"},
-		{IngredientName: "sugar", Quantity: 1, Unit: "Tbsp", Grams: 15, Phase: "dough"},
-		{IngredientName: "starter", Quantity: 2, Unit: "Tbsp", Grams: 30, Phase: "dough"},
-		{IngredientName: "milk", Quantity: 1.5, Unit: "cups", Grams: 360, Phase: "dough"},
-		{IngredientName: "barley", Quantity: 1.33, Unit: "cups", Grams: 320, Phase: "dough"},
+		{IngredientName: "bread flour (about 3 Tbsp)", Quantity: 25, Unit: "g", Grams: 25, Phase: "tangzhong", BakerPercentage: 5},
+		{IngredientName: "(125g) water", Quantity: 0.5, Unit: "cup", Grams: 120, Phase: "tangzhong", BakerPercentage: 24},
+		{IngredientName: "bread flour", Quantity: 475, Unit: "g", Grams: 475, Phase: "dough", BakerPercentage: 95},
+		{IngredientName: "sugar", Quantity: 1, Unit: "Tbsp", Grams: 15, Phase: "dough", BakerPercentage: 3},
+		{IngredientName: "starter", Quantity: 2, Unit: "Tbsp", Grams: 30, Phase: "dough", BakerPercentage: 6},
+		{IngredientName: "milk", Quantity: 1.5, Unit: "cups", Grams: 360, Phase: "dough", BakerPercentage: 72},
+		{IngredientName: "barley", Quantity: 1.33, Unit: "cups", Grams: 320, Phase: "dough", BakerPercentage: 64},
 	}
 	// Ingredient count
 	if len(recipe.Ingredients) != len(expectedIngredients) {
@@ -82,6 +83,11 @@ func TestParseRecipeText(t *testing.T) {
 		grams_diff := got.Grams - exp.Grams
 		if grams_diff < -0.01 || grams_diff > 0.01 {
 			t.Errorf("ingredient %d grams mismatch: expected %.2f, got %.2f", i, exp.Grams, got.Grams)
+		}
+
+		percent_diff := got.BakerPercentage - exp.BakerPercentage
+		if percent_diff < -0.01 || percent_diff > 0.01 {
+			t.Errorf("ingredient %d backers percent mismatch: expected %.2f, got %.2f", i, exp.BakerPercentage, got.BakerPercentage)
 		}
 	}
 

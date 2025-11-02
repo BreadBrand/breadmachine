@@ -51,15 +51,24 @@ type Recipe struct {
 func (r *Recipe) CalculateBakerPercentages() {
 	var totalFlour float64
 
+	isFlourPhase := func(p Phase) bool {
+		phase := strings.ToLower(string(p))
+		switch phase {
+		case "dough", "scald", "tangzhong", "yudane":
+			return true
+		default:
+			return false
+		}
+	}
+
 	for _, ing := range r.Ingredients {
-		if (ing.Phase == PhaseDough || ing.Phase == PhaseScald) &&
-			strings.Contains(strings.ToLower(ing.IngredientName), "flour") {
+		if isFlourPhase(ing.Phase) && strings.Contains(strings.ToLower(ing.IngredientName), "flour") {
 			totalFlour += ing.Grams
 		}
 	}
 
 	for i := range r.Ingredients {
-		if totalFlour > 0 && (r.Ingredients[i].Phase == PhaseDough || r.Ingredients[i].Phase == PhaseScald) {
+		if totalFlour > 0 && isFlourPhase(r.Ingredients[i].Phase) {
 			r.Ingredients[i].BakerPercentage = (r.Ingredients[i].Grams / totalFlour) * 100
 		} else {
 			r.Ingredients[i].BakerPercentage = 0
