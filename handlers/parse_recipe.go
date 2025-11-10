@@ -111,7 +111,9 @@ func ParseRecipeText(raw string) models.Recipe {
 			}
 
 		case "instructions":
-			recipe.Instructions = append(recipe.Instructions, line)
+			clean := strings.TrimSpace(line)
+			clean = regexp.MustCompile(`^\d+[\.\)]\s*`).ReplaceAllString(clean, "")
+			recipe.Instructions = append(recipe.Instructions, clean)
 
 		// case "notes":
 		// 	recipe.Notes = append(recipe.Notes, line)
