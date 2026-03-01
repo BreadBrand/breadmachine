@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/RedBrand88/breadmachine/models"
+	"github.com/RedBrand88/breadmachine/utility"
 )
 
 // Improved ingredient line detection
@@ -145,6 +146,7 @@ func parseIngredientLine(line string, phase models.Phase) models.Ingredient {
 		Unit: matches[2],
 		Grams: grams,
 		Phase: phase,
+		DensityGPerMl: utility.LookupDensity(matches[3]),
 	}
 	return ing
 }

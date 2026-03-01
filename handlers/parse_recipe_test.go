@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/RedBrand88/breadmachine/models"
+	"github.com/RedBrand88/breadmachine/utility"
 )
 
 func TestParseRecipeText(t *testing.T) {
@@ -24,7 +25,7 @@ func TestParseRecipeText(t *testing.T) {
 		1 Tbsp sugar
 		2 Tbsp starter
 		1 ½ cups milk
-		1 1/3 cups barley
+		1 1/3 cups barley flour
 
 
 		# Instructions
@@ -47,13 +48,13 @@ func TestParseRecipeText(t *testing.T) {
 	}
 
 	expectedIngredients := []models.Ingredient{
-		{IngredientName: "bread flour (about 3 Tbsp)", Quantity: 25, Unit: "g", Grams: 25, Phase: "tangzhong", BakerPercentage: 5},
-		{IngredientName: "(125g) water", Quantity: 0.5, Unit: "cup", Grams: 120, Phase: "tangzhong", BakerPercentage: 24},
-		{IngredientName: "bread flour", Quantity: 475, Unit: "g", Grams: 475, Phase: "dough", BakerPercentage: 95},
-		{IngredientName: "sugar", Quantity: 1, Unit: "Tbsp", Grams: 15, Phase: "dough", BakerPercentage: 3},
-		{IngredientName: "starter", Quantity: 2, Unit: "Tbsp", Grams: 30, Phase: "dough", BakerPercentage: 6},
-		{IngredientName: "milk", Quantity: 1.5, Unit: "cups", Grams: 360, Phase: "dough", BakerPercentage: 72},
-		{IngredientName: "barley", Quantity: 1.33, Unit: "cups", Grams: 320, Phase: "dough", BakerPercentage: 64},
+		{IngredientName: "bread flour (about 3 Tbsp)", Quantity: 25, Unit: "g", Grams: 25, Phase: "tangzhong", BakerPercentage: 3.05, DensityGPerMl: 0.57},
+		{IngredientName: "(125g) water", Quantity: 0.5, Unit: "cup", Grams: 120, Phase: "tangzhong", BakerPercentage: 14.63, DensityGPerMl: 1.0},
+		{IngredientName: "bread flour", Quantity: 475, Unit: "g", Grams: 475, Phase: "dough", BakerPercentage: 57.93, DensityGPerMl: 0.57},
+		{IngredientName: "sugar", Quantity: 1, Unit: "Tbsp", Grams: 15, Phase: "dough", BakerPercentage: 1.83, DensityGPerMl: 0.845},
+		{IngredientName: "starter", Quantity: 2, Unit: "Tbsp", Grams: 30, Phase: "dough", BakerPercentage: 3.66, DensityGPerMl: 1.0},
+		{IngredientName: "milk", Quantity: 1.5, Unit: "cups", Grams: 360, Phase: "dough", BakerPercentage: 43.90, DensityGPerMl: 1.03},
+		{IngredientName: "barley flour", Quantity: 1.33, Unit: "cups", Grams: 320, Phase: "dough", BakerPercentage: 39.02, DensityGPerMl: 0.59},
 	}
 	// Ingredient count
 	if len(recipe.Ingredients) != len(expectedIngredients) {
@@ -64,37 +65,42 @@ func TestParseRecipeText(t *testing.T) {
 		got := recipe.Ingredients[i]
 
 		if got.Phase != exp.Phase {
-			t.Errorf("ingredient %d phase mismatch: expected %q, got %q", i, exp.Phase, got.Phase)
+			t.Errorf("ingredient %s phase mismatch: expected %q, got %q", exp.IngredientName, exp.Phase, got.Phase)
 		}
 
 		if got.Unit != exp.Unit {
-			t.Errorf("ingredient %d unit mismatch: expected %q, got %q", i, exp.Unit, got.Unit)
+			t.Errorf("ingredient %s unit mismatch: expected %q, got %q", exp.IngredientName, exp.Unit, got.Unit)
 		}
 
 		if got.IngredientName != exp.IngredientName {
-			t.Errorf("ingredient %d name mismatch: expected %q, got %q", i, exp.IngredientName, got.IngredientName)
+			t.Errorf("ingredient %s name mismatch: expected %q, got %q", exp.IngredientName, exp.IngredientName, got.IngredientName)
 		}
 
 		diff := got.Quantity - exp.Quantity
 		if diff < -0.01 || diff > 0.01 {
-			t.Errorf("ingredient %d quantity mismatch: expected %.3f, got %.3f", i, exp.Quantity, got.Quantity)
+			t.Errorf("ingredient %s quantity mismatch: expected %.3f, got %.3f", exp.IngredientName, exp.Quantity, got.Quantity)
 		}
 
 		grams_diff := got.Grams - exp.Grams
 		if grams_diff < -0.01 || grams_diff > 0.01 {
-			t.Errorf("ingredient %d grams mismatch: expected %.2f, got %.2f", i, exp.Grams, got.Grams)
+			t.Errorf("ingredient %s grams mismatch: expected %.2f, got %.2f", exp.IngredientName, exp.Grams, got.Grams)
 		}
 
 		percent_diff := got.BakerPercentage - exp.BakerPercentage
 		if percent_diff < -0.01 || percent_diff > 0.01 {
-			t.Errorf("ingredient %d backers percent mismatch: expected %.2f, got %.2f", i, exp.BakerPercentage, got.BakerPercentage)
+			t.Errorf("ingredient %s bakers percent mismatch: expected %.2f, got %.2f", exp.IngredientName, exp.BakerPercentage, got.BakerPercentage)
+		}
+
+		density_diff := got.DensityGPerMl - exp.DensityGPerMl
+		if density_diff < -0.001 || density_diff > 0.001 {
+			t.Errorf("ingredient %s density mismatch: expected %.3f, got %.3f", exp.IngredientName, exp.DensityGPerMl, got.DensityGPerMl)
 		}
 	}
 
 	expectedInstructions := []string{
-		"1. Make the tangzhong: whisk 125g water and 25g flour together.",
-		"2. Mix wet and dry ingredients.",
-		"3. Bake at 325°F for 35-40 minutes.",
+		"Make the tangzhong: whisk 125g water and 25g flour together.",
+		"Mix wet and dry ingredients.",
+		"Bake at 325°F for 35-40 minutes.",
 	}
 
 	// Instructions
@@ -105,6 +111,32 @@ func TestParseRecipeText(t *testing.T) {
 	for i, exp := range expectedInstructions {
 		if recipe.Instructions[i] != exp {
 			t.Errorf("instruction %d mismatch:\nexpected: %q\ngot: %q", i, exp, recipe.Instructions[i])
+		}
+	}
+}
+
+func TestLookupDensity(t *testing.T) {
+	cases := []struct {
+		name     string
+		expected float64
+	}{
+		{"bread flour", 0.57},
+		{"AP flour (11.7% protein)", 0.53}, // parenthetical stripped
+		{"strong white bread flour", 0.57},
+		{"Fine Sea Salt", 1.18},
+		{"Instant Yeast", 0.43},
+		{"olive oil", 0.908},
+		{"beer", 1.01},
+		{"sourdough starter", 1.0},
+		{"barley flour", 0.59},
+		{"baking soda", 0.88},
+	}
+
+	for _, tc := range cases {
+		got := utility.LookupDensity(tc.name)
+		diff := got - tc.expected
+		if diff < -0.001 || diff > 0.001 {
+			t.Errorf("LookupDensity(%q): expected %.3f, got %.3f", tc.name, tc.expected, got)
 		}
 	}
 }
