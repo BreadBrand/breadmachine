@@ -134,6 +134,9 @@ func parseIngredientLine(line string, phase models.Phase) models.Ingredient {
 	//"Tbsp"
 	//"salted butter (softened in microwave for 15 seconds)"
 	//}
+	if len(matches) < 4 {
+		return models.Ingredient{IngredientName: line, Phase: phase}
+	}
 	//so I can use matches
 	qty := parseNumber(strings.TrimSpace(matches[1]))
 	unit := strings.ToLower(matches[2])

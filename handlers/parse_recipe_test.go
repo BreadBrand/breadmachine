@@ -140,3 +140,22 @@ func TestLookupDensity(t *testing.T) {
 		}
 	}
 }
+
+func TestParseIngredientLineNoMatch(t *testing.T) {
+    cases := []struct {
+        line  string
+        phase models.Phase
+    }{
+        {"some text with no number", "dough"},
+        {"", "dough"},
+        {"just words here", "dough"},
+    }
+
+    for _, tc := range cases {
+        // should not panic
+        got := parseIngredientLine(tc.line, tc.phase)
+        if got.Phase != tc.phase {
+            t.Errorf("expected phase %q got %q", tc.phase, got.Phase)
+        }
+    }
+}
