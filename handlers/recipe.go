@@ -54,6 +54,14 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate yeastType if provided
+	if recipe.YeastType != "" &&
+		recipe.YeastType != models.YeastTypeDry &&
+		recipe.YeastType != models.YeastTypeSourdough {
+		http.Error(w, "Invalid yeastType: must be 'dry' or 'sourdough'", http.StatusBadRequest)
+		return
+	}
+
 	// Assign Firestore-generated ID for this recipe
 	docRef := client.Collection("Recipes").NewDoc()
 	recipe.ID = docRef.ID

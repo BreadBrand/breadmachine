@@ -15,6 +15,14 @@ const (
 	PhaseAutolyse Phase = "autolyse"
 )
 
+// YeastType tracks whether a recipe uses dry yeast or sourdough starter.
+type YeastType string
+
+const (
+	YeastTypeDry       YeastType = "dry"
+	YeastTypeSourdough YeastType = "sourdough"
+)
+
 // Ingredient represents a single recipe component with baker's percentage and metadata.
 type Ingredient struct {
 	ID              string  `json:"id" firestore:"id"`
@@ -44,7 +52,7 @@ type Recipe struct {
 	Ingredients  []Ingredient `json:"ingredients" firestore:"ingredients"`
 	Meta         Meta         `json:"meta" firestore:"meta"`
 	UserID       string       `json:"userId,omitempty" firestore:"userId,omitempty"`
-	YeastType    string       `json:"yeastType,omitempty" firestore:"yeastType,omitempty"`
+	YeastType    YeastType    `json:"yeastType,omitempty" firestore:"yeastType,omitempty"`
 }
 
 // CalculateBakerPercentages inspects r.Ingredients, sums all flour quantities,
