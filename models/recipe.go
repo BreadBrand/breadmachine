@@ -44,6 +44,7 @@ type Recipe struct {
 	Ingredients  []Ingredient `json:"ingredients" firestore:"ingredients"`
 	Meta         Meta         `json:"meta" firestore:"meta"`
 	UserID       string       `json:"userId,omitempty" firestore:"userId,omitempty"`
+	YeastType    string       `json:"yeastType,omitempty" firestore:"yeastType,omitempty"`
 }
 
 // CalculateBakerPercentages inspects r.Ingredients, sums all flour quantities,
