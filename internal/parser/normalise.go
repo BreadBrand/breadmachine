@@ -44,6 +44,8 @@ var sourcePrefixes = []string{
 	"http://", "https://",
 }
 
+var knownSectionHeaders = []string{"ingredients", "directions", "instructions", "method", "steps", "notes"}
+
 var namedFractions = map[string]string{
 	"&frac12;": "1/2",
 	"&frac14;": "1/4",
@@ -57,6 +59,10 @@ var namedFractions = map[string]string{
 func Normalise(input string) (string, error) {
 	if utf8.RuneCountInString(input) > 10000 {
 		return "", ErrInputTooLarge
+	}
+
+	if strings.TrimSpace(input) == "" {
+		return "", ErrInputEmpty
 	}
 
 	// Curly quotes first — all later regex patterns use straight ASCII quotes.
@@ -74,20 +80,8 @@ func Normalise(input string) (string, error) {
 
 	// Markdown
 	input = reMarkdownLink.ReplaceAllString(input, "$1")
-	input = reMarkdownBold.ReplaceAllStringFunc(input, func(s string) string {
-		m := reMarkdownBold.FindStringSubmatch(s)
-		if m[1] != "" {
-			return m[1]
-		}
-		return m[2]
-	})
-	input = reMarkdownItalic.ReplaceAllStringFunc(input, func(s string) string {
-		m := reMarkdownItalic.FindStringSubmatch(s)
-		if m[1] != "" {
-			return m[1]
-		}
-		return m[2]
-	})
+	input = reMarkdownBold.ReplaceAllString(input, "$1$2")
+	input = reMarkdownItalic.ReplaceAllString(input, "$1$2")
 	input = reMarkdownHeading.ReplaceAllString(input, "")
 	input = reMarkdownCode.ReplaceAllString(input, "$1")
 
@@ -200,7 +194,7 @@ func normalizeCurlyQuotes(s string) string {
 }
 
 func isKnownSectionHeader(lower string) bool {
-	for _, kw := range []string{"ingredients", "directions", "instructions", "method", "steps", "notes"} {
+	for _, kw := range knownSectionHeaders {
 		if lower == kw || lower == kw+":" {
 			return true
 		}
