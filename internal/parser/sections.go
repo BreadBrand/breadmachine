@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 var (
@@ -76,10 +77,21 @@ func DetectSections(cleaned string) SectionMap {
 			continue
 		}
 		if skipBakersPct {
-			if _, ok := sectionKeywords[lowerTrimmed]; ok {
+			if dest, ok := sectionKeywords[lowerTrimmed]; ok {
 				skipBakersPct = false
-				current = secInstructions
-				currentGroup = nil
+				switch dest {
+				case "ingredients":
+					current = secIngredients
+					if currentGroup == nil {
+						g := IngredientGroup{Phase: "dough"}
+						sm.IngredientGroups = append(sm.IngredientGroups, g)
+						currentGroup = &sm.IngredientGroups[len(sm.IngredientGroups)-1]
+					}
+				case "instructions":
+					current = secInstructions
+					currentGroup = nil
+					sm.IngredientGroups = discardEmptyGroups(sm.IngredientGroups)
+				}
 			}
 			continue
 		}
@@ -216,12 +228,13 @@ func isInstructionSubHeader(line string) bool {
 		return false
 	}
 	// Must not end with terminal punctuation
-	last := rune(line[len(line)-1])
-	if last == '.' || last == '!' || last == '?' {
+	lastRune, _ := utf8.DecodeLastRuneInString(line)
+	if lastRune == '.' || lastRune == '!' || lastRune == '?' {
 		return false
 	}
 	// Must start with uppercase
-	if !unicode.IsUpper([]rune(line)[0]) {
+	firstRune, _ := utf8.DecodeRuneInString(line)
+	if !unicode.IsUpper(firstRune) {
 		return false
 	}
 	return true
@@ -238,12 +251,13 @@ func discardEmptyGroups(groups []IngredientGroup) []IngredientGroup {
 }
 
 func capDescription(desc string, limit int) string {
-	if len(desc) <= limit {
+	runes := []rune(desc)
+	if len(runes) <= limit {
 		return desc
 	}
-	truncated := desc[:limit]
+	truncated := string(runes[:limit])
 	lastPeriod := strings.LastIndex(truncated, ". ")
-	if lastPeriod > limit-200 {
+	if lastPeriod > 0 && lastPeriod > len(truncated)-200 {
 		return truncated[:lastPeriod+1]
 	}
 	return truncated
