@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
-	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -11,48 +9,8 @@ import (
 	"github.com/RedBrand88/breadmachine/utility"
 )
 
-// Improved ingredient line detection
-
-// Base unit conversions → grams
-var unitToGrams = map[string]float64{
-	"g":     1,
-	"gram":  1,
-	"grams": 1,
-	"kg":    1000,
-	"oz":    28.35,
-	"ml":    1,
-	"tsp":   5,
-	"tbsp":  15,
-	"tbs":   15,
-	"cup":   240,
-	"cups":  240,
-}
-
-// ParseRecipeHandler receives raw text and returns structured JSON.
-func ParseRecipeHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
-	var body struct {
-		Text string `json:"text"`
-	}
-
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
-		return
-	}
-
-	recipe := ParseRecipeText(body.Text)
-
-	recipe.CalculateBakerPercentages()
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(recipe)
-}
-
 // ParseRecipeText converts a raw recipe blob into a structured Recipe.
+// This is the legacy markdown-based parser; new code should use internal/parser.Parse.
 func ParseRecipeText(raw string) models.Recipe {
 	lines := strings.Split(raw, "\n")
 
@@ -115,9 +73,6 @@ func ParseRecipeText(raw string) models.Recipe {
 			clean := strings.TrimSpace(line)
 			clean = regexp.MustCompile(`^\d+[\.\)]\s*`).ReplaceAllString(clean, "")
 			recipe.Instructions = append(recipe.Instructions, clean)
-
-		// case "notes":
-		// 	recipe.Notes = append(recipe.Notes, line)
 		}
 	}
 
@@ -125,19 +80,11 @@ func ParseRecipeText(raw string) models.Recipe {
 }
 
 func parseIngredientLine(line string, phase models.Phase) models.Ingredient {
-	//example line = "4 Tbsp salted butter (softened in microwave for 15 seconds)"
 	re := regexp.MustCompile(`([\d¼½¾⅓⅔⅛\.\s\/]+)\s*([a-zA-Z]+)?\s*(.*)`)
 	matches := re.FindStringSubmatch(line)
-	//[]string{
-	//"4 Tbsp salted butter (softened in microwave for 15 seconds)"
-	//"4"
-	//"Tbsp"
-	//"salted butter (softened in microwave for 15 seconds)"
-	//}
 	if len(matches) < 4 {
 		return models.Ingredient{IngredientName: line, Phase: phase}
 	}
-	//so I can use matches
 	qty := parseNumber(strings.TrimSpace(matches[1]))
 	unit := strings.ToLower(matches[2])
 	mult := unitToGrams[unit]
@@ -145,16 +92,16 @@ func parseIngredientLine(line string, phase models.Phase) models.Ingredient {
 
 	ing := models.Ingredient{
 		IngredientName: matches[3],
-		Quantity: qty,
-		Unit: matches[2],
-		Grams: grams,
-		Phase: phase,
-		DensityGPerMl: utility.LookupDensity(matches[3]),
+		Quantity:       qty,
+		Unit:           matches[2],
+		Grams:          grams,
+		Phase:          phase,
+		DensityGPerMl:  utility.LookupDensity(matches[3]),
 	}
 	return ing
 }
 
-// Converts fractional Unicode numbers to floats
+// parseNumber converts fractional Unicode numbers to floats.
 func parseNumber(s string) float64 {
 	replacements := map[string]string{
 		"¼": "1/4",
