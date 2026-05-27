@@ -30,20 +30,22 @@ func scoreIngredients(dto RecipeDTO) float32 {
 
 	score := float32(1.0)
 
-	if total < 3 {
-		score = min32(score, 0.5)
-	}
-	if total < 5 {
-		score = min32(score, 0.7)
+	switch {
+	case total < 3:
+		score = min(score, 0.5)
+	case total < 5:
+		score = min(score, 0.7)
 	}
 
-	all := append(dto.DoughIngredients, dto.OtherIngredients...)
+	all := make([]IngredientDTO, 0, len(dto.DoughIngredients)+len(dto.OtherIngredients))
+	all = append(all, dto.DoughIngredients...)
+	all = append(all, dto.OtherIngredients...)
 	for _, ing := range all {
 		if !ing.ParseOK {
-			score = min32(score, 0.7)
+			score = min(score, 0.7)
 		}
 		if IsUnsupportedYeast(ing.IngredientName) {
-			score = min32(score, 0.4)
+			score = min(score, 0.4)
 		}
 	}
 
@@ -60,11 +62,4 @@ func scoreInstructions(dto RecipeDTO) float32 {
 	default:
 		return 0.3
 	}
-}
-
-func min32(a, b float32) float32 {
-	if b < a {
-		return b
-	}
-	return a
 }

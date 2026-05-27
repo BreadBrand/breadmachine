@@ -105,8 +105,8 @@ func TestParse_AllRecipesFocaccia(t *testing.T) {
 		t.Errorf("instructions: expected 7, got %d", len(dto.Instructions))
 	}
 
-	if dto.Confidence.Ingredients > 0.4 {
-		t.Errorf("confidence.ingredients: expected <=0.4, got %v", dto.Confidence.Ingredients)
+	if dto.Confidence.Ingredients != 0.4 {
+		t.Errorf("confidence.ingredients: expected 0.4, got %v", dto.Confidence.Ingredients)
 	}
 }
 
@@ -223,8 +223,8 @@ func TestParse_JustAPinchVolumeOnly(t *testing.T) {
 		}
 	}
 
-	if dto.Confidence.Ingredients > 0.4 {
-		t.Errorf("confidence.ingredients: expected <=0.4 due to active dry yeast, got %v",
+	if dto.Confidence.Ingredients != 0.4 {
+		t.Errorf("confidence.ingredients: expected 0.4 (unsupported yeast), got %v",
 			dto.Confidence.Ingredients)
 	}
 
