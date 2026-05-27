@@ -150,7 +150,10 @@ func Normalise(input string) (string, error) {
 			continue
 		}
 
-		// Attribution and source lines
+		// Attribution and source lines. A line that merely begins with an
+		// attribution prefix (e.g. "Author:") but packs several inline metadata
+		// pairs after it is an inline metadata string, not a byline — keep it so
+		// expandInlineMetadata can split out the Prep/Cook/Yield fields below.
 		isAttribution := false
 		for _, prefix := range attributionPrefixes {
 			if strings.HasPrefix(lower, prefix) {
@@ -158,7 +161,7 @@ func Normalise(input string) (string, error) {
 				break
 			}
 		}
-		if isAttribution {
+		if isAttribution && len(reMetadataPair.FindAllStringIndex(line, -1)) < 2 {
 			continue
 		}
 
