@@ -85,14 +85,16 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	recipe.ID = docRef.ID
 	recipe.UserID = token.UID
 
-	// Sum total dough and generate IDs for each ingredient
-	totalDough, normalized := normalizeIngredients(recipe.Ingredients)
-	recipe.Ingredients = normalized
+	// Normalize ingredients and generate IDs for each entry
+	now := time.Now()
+	doughTotal, normalizedDough := normalizeIngredients(recipe.DoughIngredients)
+	recipe.DoughIngredients = normalizedDough
+	otherTotal, normalizedOther := normalizeIngredients(recipe.OtherIngredients)
+	recipe.OtherIngredients = normalizedOther
 
 	// Populate Meta data
-	now := time.Now()
 	recipe.Meta = models.Meta{
-		YieldGrams: totalDough,
+		YieldGrams: doughTotal + otherTotal,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
