@@ -1,6 +1,9 @@
 package parser
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func doughLines(lines ...string) []IngredientGroup {
 	return []IngredientGroup{{Phase: "dough", Lines: lines}}
@@ -85,7 +88,7 @@ func TestParseIngredients_CommaNoteStripped(t *testing.T) {
 	if dough[0].IngredientName != "water" {
 		t.Errorf("got name=%q", dough[0].IngredientName)
 	}
-	if !contains(dough[0].RawLine, "warmed") {
+	if !strings.Contains(dough[0].RawLine, "warmed") {
 		t.Error("comma note should be preserved in RawLine")
 	}
 }
@@ -105,7 +108,7 @@ func TestParseIngredients_YeastAlternatives_TakeFirst(t *testing.T) {
 	if dough[0].IngredientName != "instant dry yeast" {
 		t.Errorf("got name=%q", dough[0].IngredientName)
 	}
-	if !contains(dough[0].RawLine, "active dry yeast") {
+	if !strings.Contains(dough[0].RawLine, "active dry yeast") {
 		t.Error("alternatives should be preserved in RawLine")
 	}
 }
@@ -177,14 +180,3 @@ func TestParseIngredients_ParseOKFalse_EmptyName(t *testing.T) {
 	}
 }
 
-func contains(s, substr string) bool {
-	if len(substr) == 0 {
-		return true
-	}
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}

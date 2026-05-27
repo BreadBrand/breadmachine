@@ -107,6 +107,9 @@ func parseIngredientLine(raw string) IngredientDTO {
 		}
 	}
 
+	// Strip leading comma left by "u," prefix match
+	line = strings.TrimLeft(line, ", \t")
+
 	// 7. Strip parenthetical content (e.g. "(100% hydration)", "(240 grams)")
 	line = reParenthetical.ReplaceAllString(line, "")
 	line = strings.TrimSpace(line)
