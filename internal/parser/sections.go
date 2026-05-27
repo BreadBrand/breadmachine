@@ -1,0 +1,264 @@
+package parser
+
+import (
+	"regexp"
+	"strings"
+	"unicode"
+	"unicode/utf8"
+)
+
+var (
+	reQuantityStart  = regexp.MustCompile(`^\d`)
+	reInstructionNum = regexp.MustCompile(`^\d+[\.\)]\s`)
+	reMetaField      = regexp.MustCompile(`(?i)^(Prep Time|Cook Time|Total Time|Additional Time|Servings|Yield|Category|Cuisine|Diet|Author|Baking Time|Bake Time|Rise Time|Rest Time|Chill Time|Preparation Time)[\s:]+`)
+)
+
+// sectionKeywords are only matched when they are the SOLE content of a line.
+var sectionKeywords = map[string]string{
+	"ingredients":     "ingredients",
+	"ingredient list": "ingredients",
+	"directions":      "instructions",
+	"instructions":    "instructions",
+	"method":          "instructions",
+	"steps":           "instructions",
+	"preparation":     "instructions",
+	"how to make":     "instructions",
+}
+
+// ingredientSubsectionPatterns match subsection headers within ingredients.
+var ingredientSubsectionPatterns = []struct {
+	pattern *regexp.Regexp
+	phase   string // empty means derive from capture group
+}{
+	{regexp.MustCompile(`(?i)^starter\s+build\s*[-–]?$`), "starter build"},
+	{regexp.MustCompile(`(?i)^levain\s*[-–]?$`), "levain"},
+	{regexp.MustCompile(`(?i)^final\s+dough(\s+ingredients)?\s*[-–]?$`), "final dough"},
+	{regexp.MustCompile(`(?i)^(dough)\s*[-–]?$`), "dough"},
+	{regexp.MustCompile(`(?i)^for\s+the\s+(.+?)\s*[-–]?$`), ""},  // derive from capture
+	{regexp.MustCompile(`(?i)^(.+?)\s+ingredients\s*[-–]?$`), ""},
+	{regexp.MustCompile(`(?i)^(topping|filling|sauce|pesto)\s*[-–]?$`), ""},
+}
+
+var bakersPctPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(?i)baker'?s\s+percentages?`),
+	regexp.MustCompile(`(?i)baker'?s\s+%`),
+}
+
+// DetectSections parses a normalised recipe string into a SectionMap.
+func DetectSections(cleaned string) SectionMap {
+	sm := SectionMap{}
+
+	lines := strings.Split(cleaned, "\n")
+
+	// NoLineBreaks detection
+	newlineCount := strings.Count(cleaned, "\n")
+	if newlineCount < 3 {
+		sm.NoLineBreaks = true
+	}
+
+	type section int
+	const (
+		secDescription section = iota
+		secIngredients
+		secInstructions
+	)
+
+	current := secDescription
+	var currentGroup *IngredientGroup
+	skipBakersPct := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		lowerTrimmed := strings.ToLower(strings.Trim(trimmed, ":– \t"))
+
+		// Baker's percentage block detection — skip until next known section
+		if isBakersPctHeader(trimmed) {
+			skipBakersPct = true
+			continue
+		}
+		if skipBakersPct {
+			if dest, ok := sectionKeywords[lowerTrimmed]; ok {
+				skipBakersPct = false
+				switch dest {
+				case "ingredients":
+					current = secIngredients
+					if currentGroup == nil {
+						g := IngredientGroup{Phase: "dough"}
+						sm.IngredientGroups = append(sm.IngredientGroups, g)
+						currentGroup = &sm.IngredientGroups[len(sm.IngredientGroups)-1]
+					}
+				case "instructions":
+					current = secInstructions
+					currentGroup = nil
+					sm.IngredientGroups = discardEmptyGroups(sm.IngredientGroups)
+				}
+			}
+			continue
+		}
+
+		// Section keyword matching — LINE-EXCLUSIVE (keyword must be sole content)
+		if dest, ok := sectionKeywords[lowerTrimmed]; ok {
+			switch dest {
+			case "ingredients":
+				current = secIngredients
+				if currentGroup == nil {
+					g := IngredientGroup{Phase: "dough"}
+					sm.IngredientGroups = append(sm.IngredientGroups, g)
+					currentGroup = &sm.IngredientGroups[len(sm.IngredientGroups)-1]
+				}
+			case "instructions":
+				current = secInstructions
+				currentGroup = nil
+				sm.IngredientGroups = discardEmptyGroups(sm.IngredientGroups)
+			}
+			continue
+		}
+
+		switch current {
+		case secDescription:
+			if reMetaField.MatchString(trimmed) {
+				sm.MetadataLines = append(sm.MetadataLines, trimmed)
+				continue
+			}
+			// Title: first non-empty line that doesn't start with a digit
+			if sm.Title == "" && trimmed != "" {
+				if reQuantityStart.MatchString(trimmed) {
+					sm.TitleDetectionMethod = TitleEmpty
+				} else {
+					sm.Title = trimmed
+					sm.TitleDetectionMethod = TitleHeuristic
+					continue
+				}
+			}
+			if trimmed != "" {
+				if sm.Description != "" {
+					sm.Description += "\n"
+				}
+				sm.Description += trimmed
+			}
+
+		case secIngredients:
+			if trimmed == "" {
+				continue
+			}
+			if reMetaField.MatchString(trimmed) {
+				sm.MetadataLines = append(sm.MetadataLines, trimmed)
+				continue
+			}
+			// Check for subsection header
+			if phase, ok := matchIngredientSubsection(trimmed); ok {
+				sm.IngredientGroups = discardEmptyGroups(sm.IngredientGroups)
+				g := IngredientGroup{Phase: phase}
+				sm.IngredientGroups = append(sm.IngredientGroups, g)
+				currentGroup = &sm.IngredientGroups[len(sm.IngredientGroups)-1]
+				continue
+			}
+			if currentGroup == nil {
+				g := IngredientGroup{Phase: "dough"}
+				sm.IngredientGroups = append(sm.IngredientGroups, g)
+				currentGroup = &sm.IngredientGroups[len(sm.IngredientGroups)-1]
+			}
+			currentGroup.Lines = append(currentGroup.Lines, trimmed)
+			// Update pointer (slice may have reallocated)
+			currentGroup = &sm.IngredientGroups[len(sm.IngredientGroups)-1]
+
+		case secInstructions:
+			if trimmed == "" {
+				continue
+			}
+			if reMetaField.MatchString(trimmed) {
+				sm.MetadataLines = append(sm.MetadataLines, trimmed)
+				continue
+			}
+			// Instruction sub-header: short capitalised line, no quantity, no terminal punctuation
+			if isInstructionSubHeader(trimmed) {
+				sm.InstructionLines = append(sm.InstructionLines, trimmed+":")
+				continue
+			}
+			sm.InstructionLines = append(sm.InstructionLines, trimmed)
+		}
+	}
+
+	// Final cleanup
+	sm.IngredientGroups = discardEmptyGroups(sm.IngredientGroups)
+
+	// Cap description at 2000 chars at last sentence boundary
+	sm.Description = capDescription(sm.Description, 2000)
+
+	return sm
+}
+
+func isBakersPctHeader(line string) bool {
+	for _, re := range bakersPctPatterns {
+		if re.MatchString(line) {
+			return true
+		}
+	}
+	return false
+}
+
+func matchIngredientSubsection(line string) (string, bool) {
+	for _, p := range ingredientSubsectionPatterns {
+		m := p.pattern.FindStringSubmatch(line)
+		if m == nil {
+			continue
+		}
+		if p.phase != "" {
+			return p.phase, true
+		}
+		// Derive phase from capture group
+		if len(m) > 1 {
+			phase := strings.ToLower(strings.TrimSpace(m[1]))
+			phase = strings.TrimRight(phase, "– \t")
+			return phase, true
+		}
+	}
+	return "", false
+}
+
+func isInstructionSubHeader(line string) bool {
+	words := strings.Fields(line)
+	if len(words) == 0 || len(words) > 6 {
+		return false
+	}
+	if reQuantityStart.MatchString(line) {
+		return false
+	}
+	if reInstructionNum.MatchString(line) {
+		return false
+	}
+	// Must not end with terminal punctuation
+	lastRune, _ := utf8.DecodeLastRuneInString(line)
+	if lastRune == '.' || lastRune == '!' || lastRune == '?' {
+		return false
+	}
+	// Must start with uppercase
+	firstRune, _ := utf8.DecodeRuneInString(line)
+	if !unicode.IsUpper(firstRune) {
+		return false
+	}
+	return true
+}
+
+func discardEmptyGroups(groups []IngredientGroup) []IngredientGroup {
+	var result []IngredientGroup
+	for _, g := range groups {
+		if len(g.Lines) > 0 {
+			result = append(result, g)
+		}
+	}
+	return result
+}
+
+func capDescription(desc string, limit int) string {
+	runes := []rune(desc)
+	if len(runes) <= limit {
+		return desc
+	}
+	truncated := string(runes[:limit])
+	lastPeriod := strings.LastIndex(truncated, ". ")
+	if lastPeriod > 0 && lastPeriod > len(truncated)-200 {
+		return truncated[:lastPeriod+1]
+	}
+	return truncated
+}

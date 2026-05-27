@@ -10,6 +10,24 @@ import (
 	"github.com/google/uuid"
 )
 
+// Base unit conversions → grams (shared across handlers)
+var unitToGrams = map[string]float64{
+	"g":       1,
+	"gram":    1,
+	"grams":   1,
+	"kg":      1000,
+	"oz":      28.35,
+	"ml":      1,
+	"tsp":     5,
+	"tbsp":    15,
+	"tbs":     15,
+	"cup":     240,
+	"cups":    240,
+	"lb":      453.592,
+	"pound":   453.592,
+	"pounds":  453.592,
+}
+
 // GetAllRecipes returns all recipes from Firestore
 func GetAllRecipes(w http.ResponseWriter, r *http.Request) {
 	recipes, err := FetchAllRecipesFromFirebase()
@@ -67,14 +85,16 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	recipe.ID = docRef.ID
 	recipe.UserID = token.UID
 
-	// Sum total dough and generate IDs for each ingredient
-	totalDough, normalized := normalizeIngredients(recipe.Ingredients)
-	recipe.Ingredients = normalized
+	// Normalize ingredients and generate IDs for each entry
+	now := time.Now()
+	doughTotal, normalizedDough := normalizeIngredients(recipe.DoughIngredients)
+	recipe.DoughIngredients = normalizedDough
+	otherTotal, normalizedOther := normalizeIngredients(recipe.OtherIngredients)
+	recipe.OtherIngredients = normalizedOther
 
 	// Populate Meta data
-	now := time.Now()
 	recipe.Meta = models.Meta{
-		YieldGrams: totalDough,
+		YieldGrams: doughTotal + otherTotal,
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
