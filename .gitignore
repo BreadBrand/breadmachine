@@ -17,3 +17,4 @@
 # Claude Code tooling
 /docs/
 .claude/*.md
+.claude/agents/*.md
