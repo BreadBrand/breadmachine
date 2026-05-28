@@ -1,4 +1,5 @@
 /breadmachine-api
+/migrate
 
 *.sh
 # Go build cache & temporary files
@@ -9,3 +10,10 @@
 *.tmp
 *.swp
 *.DS_Store
+
+# Binary documents
+*.docx
+
+# Claude Code tooling
+/docs/
+.claude/*.md
