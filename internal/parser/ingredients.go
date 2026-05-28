@@ -2,15 +2,15 @@ package parser
 
 import (
 	"regexp"
-	"strconv"
 	"strings"
 )
 
 var (
-	reQuantityAnchor = regexp.MustCompile(`^(\d+\.?\d*)\s*`)
-	reParenthetical  = regexp.MustCompile(`\([^)]*\)`)
+	reQuantityAnchor = regexp.MustCompile(`^(\d+(?:\.\d*)?(?:/\d+)?)\s*`)
+	reLeadingParen   = regexp.MustCompile(`^\([^)]*\)\s*`)
 	reBulletPrefix   = regexp.MustCompile(`^[-*•—–]\s+`)
 	reCrossRef       = regexp.MustCompile(`(?i)\s*(from the build above|see note|recipe follows|from above)\s*`)
+	reToppingLine    = regexp.MustCompile(`(?i)\btopping\b`)
 )
 
 var noQtyPatterns = []*regexp.Regexp{
@@ -19,9 +19,10 @@ var noQtyPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)^(.+?)\s+for\s+dusting$`),
 	regexp.MustCompile(`(?i)^(.+?)\s+for\s+greasing$`),
 	regexp.MustCompile(`(?i)^(.+?)\s+to\s+serve$`),
+	regexp.MustCompile(`(?i)^(.+?),?\s+for\s+topping$`),
 }
 
-var adjectivePrefixes = []string{"bubbly", "active", "ripe", "fresh"}
+var adjectivePrefixes = []string{"bubbly", "active", "ripe", "fresh", "large", "medium", "small"}
 
 // doughPhases routes IngredientGroup phases to doughIngredients.
 var doughPhases = map[string]bool{
@@ -36,14 +37,19 @@ var doughPhases = map[string]bool{
 
 // ParseIngredients parses all IngredientGroups and routes each line to either
 // the dough slice (bread-related phases) or the other slice (everything else).
+// Individual lines containing "topping" are routed to other regardless of group phase.
 func ParseIngredients(groups []IngredientGroup) (dough []IngredientDTO, other []IngredientDTO) {
 	for _, group := range groups {
 		for _, line := range group.Lines {
 			dto := parseIngredientLine(line)
-			if doughPhases[group.Phase] {
+			phase := group.Phase
+			if doughPhases[phase] && reToppingLine.MatchString(line) {
+				phase = "topping"
+			}
+			if doughPhases[phase] {
 				dough = append(dough, dto)
 			} else {
-				dto.Phase = group.Phase
+				dto.Phase = phase
 				other = append(other, dto)
 			}
 		}
@@ -86,10 +92,8 @@ func parseIngredientLine(raw string) IngredientDTO {
 
 	// 5. Extract quantity
 	if m := reQuantityAnchor.FindStringSubmatch(line); m != nil {
-		if qty, err := strconv.ParseFloat(m[1], 64); err == nil {
-			dto.Quantity = qty
-			line = strings.TrimSpace(line[len(m[0]):])
-		}
+		dto.Quantity = m[1]
+		line = strings.TrimSpace(line[len(m[0]):])
 	}
 
 	// 6. Extract unit (KnownUnits is ordered multi-word first)
@@ -110,8 +114,10 @@ func parseIngredientLine(raw string) IngredientDTO {
 	// Strip leading comma left by "u," prefix match
 	line = strings.TrimLeft(line, ", \t")
 
-	// 7. Strip parenthetical content (e.g. "(100% hydration)", "(240 grams)")
-	line = reParenthetical.ReplaceAllString(line, "")
+	// 7. Strip leading parenthetical (alternate measurement before ingredient name,
+	// e.g. "(4 cups)" in "500 g (4 cups) all purpose flour"). Trailing parens like
+	// "(100% hydration)" or "(2 large eggs)" are kept in the name.
+	line = reLeadingParen.ReplaceAllString(line, "")
 	line = strings.TrimSpace(line)
 
 	// 8. Strip adjective prefixes (loop; handle "adj " and "adj," forms)
@@ -153,12 +159,17 @@ func parseIngredientLine(raw string) IngredientDTO {
 	line = reCrossRef.ReplaceAllString(line, "")
 	line = strings.TrimSpace(line)
 
+	// 11. Countable items: quantity present but no unit matched → assign "count"
+	if dto.Quantity != "" && dto.Unit == "" {
+		dto.Unit = "count"
+	}
+
 	dto.IngredientName = line
 
 	// 11. Determine ParseOK: name must be non-empty; zero qty+empty unit only ok
 	// for lines matching a no-qty pattern (handled above and returned early).
 	dto.ParseOK = dto.IngredientName != "" &&
-		!(dto.Quantity == 0 && dto.Unit == "" && !isNoQtyLine(raw))
+		!(dto.Quantity == "" && dto.Unit == "" && !isNoQtyLine(raw))
 
 	return dto
 }

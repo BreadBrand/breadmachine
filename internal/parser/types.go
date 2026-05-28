@@ -17,13 +17,15 @@ type RecipeDTO struct {
 
 // IngredientDTO represents one parsed ingredient line.
 // ParseOK=false flags the line for user review in the modal; it is never silently dropped.
+// Quantity is the raw token string as it appeared in the source (e.g. "1/2", "200", "2.75")
+// so the frontend can display it as-is and convert to a number before saving.
 type IngredientDTO struct {
-	IngredientName string  `json:"ingredientName"`
-	Quantity       float64 `json:"quantity"`
-	Unit           string  `json:"unit"`
-	Phase          string  `json:"phase,omitempty"` // otherIngredients only
-	RawLine        string  `json:"rawLine"`
-	ParseOK        bool    `json:"parseOK"`
+	IngredientName string `json:"ingredientName"`
+	Quantity       string `json:"quantity"`
+	Unit           string `json:"unit"`
+	Phase          string `json:"phase,omitempty"` // otherIngredients only
+	RawLine        string `json:"rawLine"`
+	ParseOK        bool   `json:"parseOK"`
 }
 
 // TitleDetectionMethod records how the title was found, for confidence scoring.
