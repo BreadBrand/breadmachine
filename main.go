@@ -19,7 +19,7 @@ func main() {
 
 	//define API routes
 	http.HandleFunc("/api/recipes", handlers.RecipesHandler)
-	http.HandleFunc("/api/recipes/parse", handlers.ParseHandler)
+	http.HandleFunc("POST /api/recipes/parse", handlers.ParseHandler)
 	http.HandleFunc("/api/recipes/", handlers.RecipeHandler)
 
 	//start the server

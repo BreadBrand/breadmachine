@@ -34,8 +34,8 @@ func TestParse_ChainBakerFocaccia(t *testing.T) {
 	for _, ing := range dto.DoughIngredients {
 		if ing.IngredientName == "instant dry yeast" {
 			yeastFound = true
-			if ing.Quantity != 2.5 {
-				t.Errorf("yeast quantity: expected 2.5, got %v", ing.Quantity)
+			if ing.Quantity != "2.5" {
+				t.Errorf("yeast quantity: expected '2.5', got %q", ing.Quantity)
 			}
 		}
 	}
@@ -132,10 +132,10 @@ func TestParse_CleverCarrotSourdough(t *testing.T) {
 
 	var starterFound bool
 	for _, ing := range dto.DoughIngredients {
-		if ing.IngredientName == "sourdough starter" {
+		if strings.HasPrefix(ing.IngredientName, "sourdough starter") {
 			starterFound = true
-			if ing.Quantity != 50 {
-				t.Errorf("starter quantity: expected 50, got %v", ing.Quantity)
+			if ing.Quantity != "50" {
+				t.Errorf("starter quantity: expected '50', got %q", ing.Quantity)
 			}
 			if ing.Unit != "g" {
 				t.Errorf("starter unit: expected 'g', got %q", ing.Unit)
@@ -150,8 +150,8 @@ func TestParse_CleverCarrotSourdough(t *testing.T) {
 	for _, ing := range dto.DoughIngredients {
 		if strings.Contains(ing.IngredientName, "flour") {
 			flourFound = true
-			if ing.Quantity != 500 {
-				t.Errorf("flour quantity: expected 500 (gram value), got %v", ing.Quantity)
+			if ing.Quantity != "500" {
+				t.Errorf("flour quantity: expected '500', got %q", ing.Quantity)
 			}
 		}
 	}
@@ -203,8 +203,8 @@ func TestParse_JustAPinchVolumeOnly(t *testing.T) {
 	for _, ing := range dto.DoughIngredients {
 		if ing.IngredientName == "water" {
 			waterFound = true
-			if ing.Quantity != 1 {
-				t.Errorf("water: expected qty=1, got %v", ing.Quantity)
+			if ing.Quantity != "1" {
+				t.Errorf("water: expected qty='1', got %q", ing.Quantity)
 			}
 			if ing.Unit != "cup" {
 				t.Errorf("water: expected unit='cup', got %q", ing.Unit)

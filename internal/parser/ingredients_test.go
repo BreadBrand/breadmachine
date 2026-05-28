@@ -11,28 +11,28 @@ func doughLines(lines ...string) []IngredientGroup {
 
 func TestParseIngredients_Integer(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("200 g flour"))
-	if dough[0].Quantity != 200 || dough[0].Unit != "g" || dough[0].IngredientName != "flour" {
+	if dough[0].Quantity != "200" || dough[0].Unit != "g" || dough[0].IngredientName != "flour" {
 		t.Errorf("got qty=%v unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
 	}
 }
 
 func TestParseIngredients_Decimal(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("2.5 tsp salt"))
-	if dough[0].Quantity != 2.5 {
-		t.Errorf("expected 2.5, got %v", dough[0].Quantity)
+	if dough[0].Quantity != "2.5" {
+		t.Errorf("expected '2.5', got %q", dough[0].Quantity)
 	}
 }
 
-func TestParseIngredients_Fraction(t *testing.T) {
+func TestParseIngredients_DecimalZeroPointFive(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("0.5 tsp salt"))
-	if dough[0].Quantity != 0.5 {
-		t.Errorf("expected 0.5, got %v", dough[0].Quantity)
+	if dough[0].Quantity != "0.5" {
+		t.Errorf("expected '0.5', got %q", dough[0].Quantity)
 	}
 }
 
 func TestParseIngredients_MetricFirst_DualMeasurement(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("500 g (4 cups) all purpose flour"))
-	if dough[0].Quantity != 500 || dough[0].Unit != "g" {
+	if dough[0].Quantity != "500" || dough[0].Unit != "g" {
 		t.Errorf("got qty=%v unit=%q", dough[0].Quantity, dough[0].Unit)
 	}
 	if dough[0].IngredientName != "all purpose flour" {
@@ -42,7 +42,7 @@ func TestParseIngredients_MetricFirst_DualMeasurement(t *testing.T) {
 
 func TestParseIngredients_VolumeFirst_DualMeasurement(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("1 cup (240 grams) water"))
-	if dough[0].Quantity != 1 || dough[0].Unit != "cup" {
+	if dough[0].Quantity != "1" || dough[0].Unit != "cup" {
 		t.Errorf("got qty=%v unit=%q", dough[0].Quantity, dough[0].Unit)
 	}
 	if dough[0].IngredientName != "water" {
@@ -52,8 +52,8 @@ func TestParseIngredients_VolumeFirst_DualMeasurement(t *testing.T) {
 
 func TestParseIngredients_WholeItem(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("1 bell pepper, cut into chunks"))
-	if dough[0].Unit != "" {
-		t.Errorf("whole item should have empty unit, got %q", dough[0].Unit)
+	if dough[0].Unit != "count" {
+		t.Errorf("whole item should have count unit, got %q", dough[0].Unit)
 	}
 	if dough[0].IngredientName != "bell pepper" {
 		t.Errorf("got name=%q", dough[0].IngredientName)
@@ -62,8 +62,8 @@ func TestParseIngredients_WholeItem(t *testing.T) {
 
 func TestParseIngredients_NoQuantityPattern_ToTaste(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("Salt to taste"))
-	if dough[0].Quantity != 0 {
-		t.Errorf("expected quantity=0, got %v", dough[0].Quantity)
+	if dough[0].Quantity != "" {
+		t.Errorf("expected quantity='', got %q", dough[0].Quantity)
 	}
 	if dough[0].IngredientName != "salt" {
 		t.Errorf("got name=%q", dough[0].IngredientName)
@@ -73,13 +73,33 @@ func TestParseIngredients_NoQuantityPattern_ToTaste(t *testing.T) {
 	}
 }
 
-func TestParseIngredients_ParentheticalStripped(t *testing.T) {
+func TestParseIngredients_TrailingParenthetical_PreservedInName(t *testing.T) {
+	// Trailing parens like "(100% hydration)" are kept — they are useful context.
 	dough, _ := ParseIngredients(doughLines("50 g bubbly, active sourdough starter (100% hydration)"))
-	if dough[0].IngredientName != "sourdough starter" {
+	if dough[0].IngredientName != "sourdough starter (100% hydration)" {
 		t.Errorf("got name=%q", dough[0].IngredientName)
 	}
 	if !dough[0].ParseOK {
 		t.Error("expected ParseOK=true")
+	}
+}
+
+func TestParseIngredients_LeadingParenthetical_Stripped(t *testing.T) {
+	// Leading parens (alternate measurement before ingredient name) are stripped.
+	dough, _ := ParseIngredients(doughLines("500 g (4 cups) all purpose flour"))
+	if dough[0].IngredientName != "all purpose flour" {
+		t.Errorf("got name=%q", dough[0].IngredientName)
+	}
+}
+
+func TestParseIngredients_CountParenthetical_PreservedInName(t *testing.T) {
+	// Count info attached to ingredient name is preserved.
+	dough, _ := ParseIngredients(doughLines("105g eggs(2 large eggs)"))
+	if dough[0].IngredientName != "eggs(2 large eggs)" {
+		t.Errorf("got name=%q", dough[0].IngredientName)
+	}
+	if dough[0].Quantity != "105" || dough[0].Unit != "g" {
+		t.Errorf("got qty=%q unit=%q", dough[0].Quantity, dough[0].Unit)
 	}
 }
 
@@ -102,8 +122,8 @@ func TestParseIngredients_CrossReferenceStripped(t *testing.T) {
 
 func TestParseIngredients_YeastAlternatives_TakeFirst(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("2.5g instant dry yeast or 3g active dry yeast or 7.5g fresh yeast"))
-	if dough[0].Quantity != 2.5 {
-		t.Errorf("expected 2.5, got %v", dough[0].Quantity)
+	if dough[0].Quantity != "2.5" {
+		t.Errorf("expected '2.5', got %q", dough[0].Quantity)
 	}
 	if dough[0].IngredientName != "instant dry yeast" {
 		t.Errorf("got name=%q", dough[0].IngredientName)
@@ -142,8 +162,8 @@ func TestParseIngredients_Type00Flour_ParsedCorrectly(t *testing.T) {
 	if dough[0].IngredientName != "type 00 flour" {
 		t.Errorf("got name=%q", dough[0].IngredientName)
 	}
-	if dough[0].Quantity != 500 {
-		t.Errorf("got qty=%v", dough[0].Quantity)
+	if dough[0].Quantity != "500" {
+		t.Errorf("got qty=%q", dough[0].Quantity)
 	}
 }
 
@@ -164,6 +184,62 @@ func TestParseIngredients_ArrayRouting_StarterBuild_ToDough(t *testing.T) {
 	}
 }
 
+func TestParseIngredients_ForTopping_RoutesToOther(t *testing.T) {
+	groups := []IngredientGroup{
+		{Phase: "", Lines: []string{"200 g flour", "turbinado sugar for topping"}},
+	}
+	dough, other := ParseIngredients(groups)
+	if len(dough) != 1 {
+		t.Errorf("expected 1 dough ingredient, got %d", len(dough))
+	}
+	if len(other) != 1 {
+		t.Errorf("expected 1 other ingredient, got %d", len(other))
+	}
+	if other[0].Phase != "topping" {
+		t.Errorf("expected phase 'topping', got %q", other[0].Phase)
+	}
+}
+
+func TestParseIngredients_ForTopping_StripsPhrasFromName(t *testing.T) {
+	groups := []IngredientGroup{
+		{Phase: "", Lines: []string{"turbinado sugar for topping"}},
+	}
+	_, other := ParseIngredients(groups)
+	if other[0].IngredientName != "turbinado sugar" {
+		t.Errorf("expected name 'turbinado sugar', got %q", other[0].IngredientName)
+	}
+	if !other[0].ParseOK {
+		t.Error("expected ParseOK=true")
+	}
+}
+
+func TestParseIngredients_ForTopping_WithComma_RoutesToOther(t *testing.T) {
+	groups := []IngredientGroup{
+		{Phase: "", Lines: []string{"sesame seeds, for topping"}},
+	}
+	_, other := ParseIngredients(groups)
+	if len(other) != 1 {
+		t.Errorf("expected 1 other ingredient, got %d", len(other))
+	}
+	if other[0].IngredientName != "sesame seeds" {
+		t.Errorf("expected name 'sesame seeds', got %q", other[0].IngredientName)
+	}
+}
+
+func TestParseIngredients_ToppingPhaseSection_RoutesToOther(t *testing.T) {
+	// A named "topping" section from DetectSections should still route correctly.
+	groups := []IngredientGroup{
+		{Phase: "topping", Lines: []string{"2 tbsp demerara sugar"}},
+	}
+	dough, other := ParseIngredients(groups)
+	if len(dough) != 0 {
+		t.Errorf("topping phase should not route to dough, got %d dough", len(dough))
+	}
+	if len(other) != 1 || other[0].Phase != "topping" {
+		t.Errorf("expected 1 other with phase 'topping', got %+v", other)
+	}
+}
+
 func TestParseIngredients_BulletStripped(t *testing.T) {
 	for _, bullet := range []string{"- 200g flour", "* 200g flour", "• 200g flour", "— 200g flour"} {
 		dough, _ := ParseIngredients(doughLines(bullet))
@@ -177,6 +253,89 @@ func TestParseIngredients_ParseOKFalse_EmptyName(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("100 g"))
 	if dough[0].ParseOK {
 		t.Error("empty ingredient name should set ParseOK=false")
+	}
+}
+
+func TestParseIngredients_Eggs_LargeStripped_CountUnit(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("2 large eggs"))
+	if dough[0].Quantity != "2" || dough[0].Unit != "count" || dough[0].IngredientName != "eggs" {
+		t.Errorf("got qty=%q unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
+	}
+	if !dough[0].ParseOK {
+		t.Error("expected ParseOK=true")
+	}
+}
+
+func TestParseIngredients_SizeQualifier_Medium_Stripped(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("1 medium onion"))
+	if dough[0].IngredientName != "onion" {
+		t.Errorf("expected 'onion', got %q", dough[0].IngredientName)
+	}
+	if dough[0].Unit != "count" {
+		t.Errorf("expected unit 'count', got %q", dough[0].Unit)
+	}
+}
+
+func TestParseIngredients_SizeQualifier_Small_Stripped(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("2 small lemons"))
+	if dough[0].IngredientName != "lemons" {
+		t.Errorf("expected 'lemons', got %q", dough[0].IngredientName)
+	}
+	if dough[0].Unit != "count" {
+		t.Errorf("expected unit 'count', got %q", dough[0].Unit)
+	}
+}
+
+func TestParseIngredients_CountUnit_NotAppliedWhenUnitPresent(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("2 tsp salt"))
+	if dough[0].Unit != "tsp" {
+		t.Errorf("known unit should not be replaced by count, got %q", dough[0].Unit)
+	}
+}
+
+func TestParseIngredients_CountUnit_NotAppliedWithNoQuantity(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("Salt to taste"))
+	if dough[0].Unit != "" {
+		t.Errorf("no-qty pattern should not get count unit, got %q", dough[0].Unit)
+	}
+}
+
+func TestParseIngredients_StandaloneFraction_Half(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("1/2 tsp baking soda"))
+	if dough[0].Quantity != "1/2" || dough[0].Unit != "tsp" || dough[0].IngredientName != "baking soda" {
+		t.Errorf("got qty=%q unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
+	}
+	if !dough[0].ParseOK {
+		t.Error("expected ParseOK=true")
+	}
+}
+
+func TestParseIngredients_StandaloneFraction_Quarter(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("1/4 tsp salt"))
+	if dough[0].Quantity != "1/4" || dough[0].Unit != "tsp" || dough[0].IngredientName != "salt" {
+		t.Errorf("got qty=%q unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
+	}
+}
+
+func TestParseIngredients_StandaloneFraction_ThreeQuarters(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("3/4 cup flour"))
+	if dough[0].Quantity != "3/4" || dough[0].Unit != "cup" || dough[0].IngredientName != "flour" {
+		t.Errorf("got qty=%q unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
+	}
+}
+
+func TestParseIngredients_StandaloneFraction_TwoThirds(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("2/3 cup water"))
+	if dough[0].Quantity != "2/3" || dough[0].Unit != "cup" || dough[0].IngredientName != "water" {
+		t.Errorf("got qty=%q unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
+	}
+}
+
+func TestParseIngredients_UnicodeHalfFraction_AfterNormalise(t *testing.T) {
+	// ½ is converted to "1/2" by Normalise; ingredient parser then sees "1/2 teaspoon dried basil"
+	dto := parseIngredientLine("1/2 teaspoon dried basil")
+	if dto.Quantity != "1/2" || dto.Unit != "teaspoon" || dto.IngredientName != "dried basil" {
+		t.Errorf("got qty=%q unit=%q name=%q", dto.Quantity, dto.Unit, dto.IngredientName)
 	}
 }
 

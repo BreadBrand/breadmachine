@@ -22,11 +22,6 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 // ParseHandler handles POST /api/recipes/parse.
 // Accepts JSON body {"text": "..."} and returns a RecipeDTO.
 func ParseHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		writeError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "POST only")
-		return
-	}
-
 	// Auth — same pattern as CreateRecipe
 	authHeader := r.Header.Get("Authorization")
 	tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
