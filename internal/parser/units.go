@@ -20,7 +20,45 @@ var KnownUnits = []string{
 	"tbsp", "tablespoon", "tablespoons",
 	"cup", "cups",
 	// approximate
-	"pinch", "handful", "dash", "smidge", "sprig", "clove", "slice", "piece",
+	"pinch", "handful", "dash", "smidge", "sprig", "clove", "slice", "piece", "bunch",
+}
+
+// unitCanonicals maps long-form and plural unit variants to their canonical abbreviation.
+var unitCanonicals = map[string]string{
+	"fluid ounce":  "fl oz",
+	"fluid ounces": "fl oz",
+	"gram":         "g",
+	"grams":        "g",
+	"kilogram":     "kg",
+	"kilograms":    "kg",
+	"ounce":        "oz",
+	"ounces":       "oz",
+	"pound":        "lb",
+	"pounds":       "lb",
+	"milliliter":   "ml",
+	"millilitre":   "ml",
+	"milliliters":  "ml",
+	"millilitres":  "ml",
+	"liter":        "l",
+	"litre":        "l",
+	"liters":       "l",
+	"litres":       "l",
+	"teaspoon":     "tsp",
+	"teaspoons":    "tsp",
+	"tablespoon":   "tbsp",
+	"tablespoons":  "tbsp",
+	"cups":         "cup",
+	// legacy variant never in KnownUnits but present in some DB records
+	"tbs": "tbsp",
+}
+
+// CanonicalUnit returns the canonical abbreviation for a matched unit string.
+// If no mapping exists the input is returned unchanged.
+func CanonicalUnit(u string) string {
+	if canon, ok := unitCanonicals[u]; ok {
+		return canon
+	}
+	return u
 }
 
 // MatchUnit returns the canonical unit string if the token matches a known unit,
@@ -29,7 +67,7 @@ func MatchUnit(token string) string {
 	lower := strings.ToLower(strings.TrimSpace(token))
 	for _, u := range KnownUnits {
 		if lower == u {
-			return u
+			return CanonicalUnit(u)
 		}
 	}
 	return ""
