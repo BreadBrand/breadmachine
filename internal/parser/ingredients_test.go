@@ -334,7 +334,7 @@ func TestParseIngredients_StandaloneFraction_TwoThirds(t *testing.T) {
 func TestParseIngredients_UnicodeHalfFraction_AfterNormalise(t *testing.T) {
 	// ½ is converted to "1/2" by Normalise; ingredient parser then sees "1/2 teaspoon dried basil"
 	dto := parseIngredientLine("1/2 teaspoon dried basil")
-	if dto.Quantity != "1/2" || dto.Unit != "teaspoon" || dto.IngredientName != "dried basil" {
+	if dto.Quantity != "1/2" || dto.Unit != "tsp" || dto.IngredientName != "dried basil" {
 		t.Errorf("got qty=%q unit=%q name=%q", dto.Quantity, dto.Unit, dto.IngredientName)
 	}
 }
@@ -364,7 +364,7 @@ func TestParseIngredients_MixedNumber_OneAndHalf(t *testing.T) {
 
 func TestParseIngredients_MixedNumber_OneAndThreeQuarters(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("1 3/4 cups bread flour , or all-purpose/plain"))
-	if dough[0].Quantity != "1 3/4" || dough[0].Unit != "cups" || dough[0].IngredientName != "bread flour" {
+	if dough[0].Quantity != "1 3/4" || dough[0].Unit != "cup" || dough[0].IngredientName != "bread flour" {
 		t.Errorf("got qty=%q unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
 	}
 	if !dough[0].ParseOK {
@@ -372,3 +372,18 @@ func TestParseIngredients_MixedNumber_OneAndThreeQuarters(t *testing.T) {
 	}
 }
 
+func TestParseIngredients_Bunch_RecognisedAsUnit(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("1 bunch cilantro"))
+	if dough[0].Unit != "bunch" {
+		t.Errorf("expected unit 'bunch', got %q", dough[0].Unit)
+	}
+	if dough[0].IngredientName != "cilantro" {
+		t.Errorf("expected name 'cilantro', got %q", dough[0].IngredientName)
+	}
+	if dough[0].Quantity != "1" {
+		t.Errorf("expected quantity '1', got %q", dough[0].Quantity)
+	}
+	if !dough[0].ParseOK {
+		t.Error("expected ParseOK=true")
+	}
+}

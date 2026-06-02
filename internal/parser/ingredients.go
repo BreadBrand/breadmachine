@@ -100,12 +100,12 @@ func parseIngredientLine(raw string) IngredientDTO {
 	lower := strings.ToLower(line)
 	for _, u := range KnownUnits {
 		if lower == u {
-			dto.Unit = u
+			dto.Unit = CanonicalUnit(u)
 			line = ""
 			break
 		}
 		if strings.HasPrefix(lower, u+" ") || strings.HasPrefix(lower, u+",") {
-			dto.Unit = u
+			dto.Unit = CanonicalUnit(u)
 			line = strings.TrimSpace(line[len(u):])
 			break
 		}
@@ -122,6 +122,7 @@ func parseIngredientLine(raw string) IngredientDTO {
 		if m2 := reQuantityAnchor.FindString(tail); m2 != "" {
 			rest := strings.TrimSpace(tail[len(m2):])
 			lower2 := strings.ToLower(rest)
+			// The alternate unit is intentionally discarded — only advance line past it.
 			for _, u := range KnownUnits {
 				if lower2 == u || strings.HasPrefix(lower2, u+" ") || strings.HasPrefix(lower2, u+",") {
 					line = strings.TrimLeft(strings.TrimSpace(rest[len(u):]), ", \t")
