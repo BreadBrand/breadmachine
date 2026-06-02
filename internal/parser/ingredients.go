@@ -26,13 +26,16 @@ var adjectivePrefixes = []string{"bubbly", "active", "ripe", "fresh", "large", "
 
 // doughPhases routes IngredientGroup phases to doughIngredients.
 var doughPhases = map[string]bool{
-	"dough":       true,
-	"":            true,
+	"dough":         true,
+	"":              true,
 	"starter build": true,
-	"levain":      true,
-	"starter":     true,
-	"pre-ferment": true,
-	"final dough": true,
+	"levain":        true,
+	"starter":       true,
+	"pre-ferment":   true,
+	"final dough":   true,
+	"scald":         true,
+	"tangzhong":     true,
+	"yudane":        true,
 }
 
 // ParseIngredients parses all IngredientGroups and routes each line to either
@@ -100,12 +103,12 @@ func parseIngredientLine(raw string) IngredientDTO {
 	lower := strings.ToLower(line)
 	for _, u := range KnownUnits {
 		if lower == u {
-			dto.Unit = u
+			dto.Unit = CanonicalUnit(u)
 			line = ""
 			break
 		}
 		if strings.HasPrefix(lower, u+" ") || strings.HasPrefix(lower, u+",") {
-			dto.Unit = u
+			dto.Unit = CanonicalUnit(u)
 			line = strings.TrimSpace(line[len(u):])
 			break
 		}
@@ -122,6 +125,7 @@ func parseIngredientLine(raw string) IngredientDTO {
 		if m2 := reQuantityAnchor.FindString(tail); m2 != "" {
 			rest := strings.TrimSpace(tail[len(m2):])
 			lower2 := strings.ToLower(rest)
+			// The alternate unit is intentionally discarded — only advance line past it.
 			for _, u := range KnownUnits {
 				if lower2 == u || strings.HasPrefix(lower2, u+" ") || strings.HasPrefix(lower2, u+",") {
 					line = strings.TrimLeft(strings.TrimSpace(rest[len(u):]), ", \t")

@@ -7,25 +7,24 @@ import (
 	"time"
 
 	"github.com/RedBrand88/breadmachine/models"
+	"github.com/RedBrand88/breadmachine/utility"
 	"github.com/google/uuid"
 )
 
-// Base unit conversions → grams (shared across handlers)
+// unitToGrams maps canonical unit strings to their gram equivalent.
+// Volume units use water density (1 g/ml) as the base; density lookup in
+// normalizeIngredients adjusts the effective weight per ingredient.
 var unitToGrams = map[string]float64{
-	"g":       1,
-	"gram":    1,
-	"grams":   1,
-	"kg":      1000,
-	"oz":      28.35,
-	"ml":      1,
-	"tsp":     5,
-	"tbsp":    15,
-	"tbs":     15,
-	"cup":     240,
-	"cups":    240,
-	"lb":      453.592,
-	"pound":   453.592,
-	"pounds":  453.592,
+	"g":     1,
+	"kg":    1000,
+	"oz":    28.35,
+	"lb":    453.592,
+	"fl oz": 29.57,
+	"ml":    1,
+	"l":     1000,
+	"tsp":   5,
+	"tbsp":  15,
+	"cup":   240,
 }
 
 // GetAllRecipes returns all recipes from Firestore
@@ -171,6 +170,11 @@ func normalizeIngredients(ingredients []models.Ingredient) (float64, []models.In
 			}
 			ing.Grams = ing.Quantity * mult
 		}
+
+		if ing.DensityGPerMl == 0 {
+			ing.DensityGPerMl = utility.LookupDensity(ing.IngredientName)
+		}
+
 		totalDough += ing.Grams
 	}
 	return totalDough, ingredients

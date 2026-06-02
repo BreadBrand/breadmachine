@@ -34,6 +34,9 @@ var ingredientSubsectionPatterns = []struct {
 	{regexp.MustCompile(`(?i)^levain\s*[-–]?$`), "levain"},
 	{regexp.MustCompile(`(?i)^final\s+dough(\s+ingredients)?\s*[-–]?$`), "final dough"},
 	{regexp.MustCompile(`(?i)^(dough)\s*[-–]?$`), "dough"},
+	{regexp.MustCompile(`(?i)^scald\s*[-–]?$`), "scald"},
+	{regexp.MustCompile(`(?i)^tangzhong\s*[-–]?$`), "tangzhong"},
+	{regexp.MustCompile(`(?i)^yudane\s*[-–]?$`), "yudane"},
 	{regexp.MustCompile(`(?i)^for\s+the\s+(.+?)\s*[-–]?$`), ""},  // derive from capture
 	{regexp.MustCompile(`(?i)^(.+?)\s+ingredients\s*[-–]?$`), ""},
 	{regexp.MustCompile(`(?i)^(topping|filling|sauce|pesto)\s*[-–]?$`), ""},

@@ -8,10 +8,12 @@ import (
 type Phase string
 
 const (
-	PhaseDough    Phase = "dough"
-	PhaseScald    Phase = "scald"
-	PhaseSoak     Phase = "soak"
-	PhaseAutolyse Phase = "autolyse"
+	PhaseDough      Phase = "dough"
+	PhaseScald      Phase = "scald"
+	PhaseTangzhong  Phase = "tangzhong"
+	PhaseYudane     Phase = "yudane"
+	PhaseSoak       Phase = "soak"
+	PhaseAutolyse   Phase = "autolyse"
 )
 
 type YeastType string

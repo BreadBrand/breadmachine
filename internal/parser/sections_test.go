@@ -164,3 +164,48 @@ func TestDetectSections_DescriptionCappedAt2000(t *testing.T) {
 		t.Errorf("description exceeds 2000 chars: %d", len(sm.Description))
 	}
 }
+
+func TestDetectSections_Scald_NoColon_RecognisedAsSubsection(t *testing.T) {
+	input := "Burger Buns\n\nIngredients\n300g bread flour\n150g water\nScald\n60g bread flour\n180ml boiling water\n\nDirections\nMix."
+	sm := DetectSections(input)
+	if len(sm.IngredientGroups) != 2 {
+		t.Fatalf("expected 2 ingredient groups, got %d", len(sm.IngredientGroups))
+	}
+	found := false
+	for _, g := range sm.IngredientGroups {
+		if g.Phase == "scald" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected a group with phase 'scald'")
+	}
+}
+
+func TestDetectSections_Tangzhong_NoColon_RecognisedAsSubsection(t *testing.T) {
+	input := "Milk Bread\n\nIngredients\n300g bread flour\nTangzhong\n30g bread flour\n150ml milk\n\nDirections\nMix."
+	sm := DetectSections(input)
+	found := false
+	for _, g := range sm.IngredientGroups {
+		if g.Phase == "tangzhong" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected a group with phase 'tangzhong'")
+	}
+}
+
+func TestDetectSections_Yudane_NoColon_RecognisedAsSubsection(t *testing.T) {
+	input := "Japanese Milk Bread\n\nIngredients\n300g bread flour\nYudane\n50g bread flour\n50ml boiling water\n\nDirections\nMix."
+	sm := DetectSections(input)
+	found := false
+	for _, g := range sm.IngredientGroups {
+		if g.Phase == "yudane" {
+			found = true
+		}
+	}
+	if !found {
+		t.Error("expected a group with phase 'yudane'")
+	}
+}
