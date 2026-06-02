@@ -213,6 +213,18 @@ func matchIngredientSubsection(line string) (string, bool) {
 			return phase, true
 		}
 	}
+
+	// Catch-all: short colon-terminated line with no digits is a subsection header.
+	// Handles "Finishes:", "Cheese Naan:", "For serving:", etc.
+	if strings.HasSuffix(line, ":") {
+		name := strings.TrimRight(line, ": \t")
+		if name != "" && !strings.ContainsAny(name, "0123456789") {
+			if words := strings.Fields(name); len(words) >= 1 && len(words) <= 4 {
+				return strings.ToLower(name), true
+			}
+		}
+	}
+
 	return "", false
 }
 

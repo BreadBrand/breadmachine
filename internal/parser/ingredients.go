@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	reQuantityAnchor = regexp.MustCompile(`^(\d+(?:\.\d*)?(?:/\d+)?)\s*`)
+	reQuantityAnchor = regexp.MustCompile(`^(\d+\s+\d+/\d+|\d+(?:\.\d*)?(?:/\d+)?)\s*`)
 	reLeadingParen   = regexp.MustCompile(`^\([^)]*\)\s*`)
 	reBulletPrefix   = regexp.MustCompile(`^[-*•—–]\s+`)
 	reCrossRef       = regexp.MustCompile(`(?i)\s*(from the build above|see note|recipe follows|from above)\s*`)
@@ -113,6 +113,23 @@ func parseIngredientLine(raw string) IngredientDTO {
 
 	// Strip leading comma left by "u," prefix match
 	line = strings.TrimLeft(line, ", \t")
+
+	// 6.5. Strip inline alternate measurement expressed as "/ N unit"
+	// e.g. "/ 2 tbsp" from "30g / 2 tbsp ghee". Only attempt when a primary
+	// unit was already matched, so we don't accidentally consume ingredient names.
+	if dto.Unit != "" && strings.HasPrefix(line, "/") {
+		tail := strings.TrimSpace(line[1:])
+		if m2 := reQuantityAnchor.FindString(tail); m2 != "" {
+			rest := strings.TrimSpace(tail[len(m2):])
+			lower2 := strings.ToLower(rest)
+			for _, u := range KnownUnits {
+				if lower2 == u || strings.HasPrefix(lower2, u+" ") || strings.HasPrefix(lower2, u+",") {
+					line = strings.TrimLeft(strings.TrimSpace(rest[len(u):]), ", \t")
+					break
+				}
+			}
+		}
+	}
 
 	// 7. Strip leading parenthetical (alternate measurement before ingredient name,
 	// e.g. "(4 cups)" in "500 g (4 cups) all purpose flour"). Trailing parens like
