@@ -113,6 +113,49 @@ func TestDetectSections_InstructionSubHeaderPrepended(t *testing.T) {
 	}
 }
 
+func TestDetectSections_ColonSubsection_Finishes_RoutesToOther(t *testing.T) {
+	input := "Naan\n\nIngredients\n270g bread flour\nFinishes:\n30g ghee\n1 garlic clove\n\nInstructions\nMix."
+	sm := DetectSections(input)
+	if len(sm.IngredientGroups) != 2 {
+		t.Fatalf("expected 2 ingredient groups, got %d", len(sm.IngredientGroups))
+	}
+	if sm.IngredientGroups[0].Phase != "dough" || len(sm.IngredientGroups[0].Lines) != 1 {
+		t.Errorf("group 0: got phase=%q lines=%d", sm.IngredientGroups[0].Phase, len(sm.IngredientGroups[0].Lines))
+	}
+	if sm.IngredientGroups[1].Phase != "finishes" || len(sm.IngredientGroups[1].Lines) != 2 {
+		t.Errorf("group 1: got phase=%q lines=%d", sm.IngredientGroups[1].Phase, len(sm.IngredientGroups[1].Lines))
+	}
+	_, other := ParseIngredients(sm.IngredientGroups)
+	if len(other) != 2 {
+		t.Errorf("finishes ingredients should route to other, got %d", len(other))
+	}
+}
+
+func TestDetectSections_ColonSubsection_MultiWord_RoutesToOther(t *testing.T) {
+	input := "Naan\n\nIngredients\n270g bread flour\nCheese Naan:\n100g cheddar\n\nInstructions\nMix."
+	sm := DetectSections(input)
+	if len(sm.IngredientGroups) != 2 {
+		t.Fatalf("expected 2 ingredient groups, got %d", len(sm.IngredientGroups))
+	}
+	if sm.IngredientGroups[1].Phase != "cheese naan" {
+		t.Errorf("expected phase 'cheese naan', got %q", sm.IngredientGroups[1].Phase)
+	}
+	_, other := ParseIngredients(sm.IngredientGroups)
+	if len(other) != 1 {
+		t.Errorf("cheese naan ingredient should route to other, got %d", len(other))
+	}
+}
+
+func TestDetectSections_ColonSubsection_WithDigit_NotMatched(t *testing.T) {
+	// A line with a digit (like a step label) should not be treated as a subsection.
+	input := "Bread\n\nIngredients\n500g flour\nStep 1:\n200g water\n\nInstructions\nMix."
+	sm := DetectSections(input)
+	// "Step 1:" has a digit — should fall through as a plain ingredient line, not create a new group
+	if len(sm.IngredientGroups) != 1 {
+		t.Errorf("line with digit should not create subsection, got %d groups", len(sm.IngredientGroups))
+	}
+}
+
 func TestDetectSections_DescriptionCappedAt2000(t *testing.T) {
 	longDesc := strings.Repeat("This is a description sentence. ", 80) // >2000 chars
 	input := "My Bread\n\n" + longDesc + "\n\nIngredients\n500g flour"

@@ -339,3 +339,36 @@ func TestParseIngredients_UnicodeHalfFraction_AfterNormalise(t *testing.T) {
 	}
 }
 
+func TestParseIngredients_DualMeasurement_InlineSlash_AltUnitStripped(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("30g / 2 tbsp ghee or unsalted butter , melted"))
+	if dough[0].Quantity != "30" || dough[0].Unit != "g" {
+		t.Errorf("got qty=%q unit=%q", dough[0].Quantity, dough[0].Unit)
+	}
+	if dough[0].IngredientName != "ghee or unsalted butter" {
+		t.Errorf("got name=%q", dough[0].IngredientName)
+	}
+	if !dough[0].ParseOK {
+		t.Error("expected ParseOK=true")
+	}
+}
+
+func TestParseIngredients_MixedNumber_OneAndHalf(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("1 1/2 tbsp whisked egg , at room temp (around 1/2 an egg)"))
+	if dough[0].Quantity != "1 1/2" || dough[0].Unit != "tbsp" || dough[0].IngredientName != "whisked egg" {
+		t.Errorf("got qty=%q unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
+	}
+	if !dough[0].ParseOK {
+		t.Error("expected ParseOK=true")
+	}
+}
+
+func TestParseIngredients_MixedNumber_OneAndThreeQuarters(t *testing.T) {
+	dough, _ := ParseIngredients(doughLines("1 3/4 cups bread flour , or all-purpose/plain"))
+	if dough[0].Quantity != "1 3/4" || dough[0].Unit != "cups" || dough[0].IngredientName != "bread flour" {
+		t.Errorf("got qty=%q unit=%q name=%q", dough[0].Quantity, dough[0].Unit, dough[0].IngredientName)
+	}
+	if !dough[0].ParseOK {
+		t.Error("expected ParseOK=true")
+	}
+}
+
