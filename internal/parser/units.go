@@ -55,10 +55,11 @@ var unitCanonicals = map[string]string{
 // CanonicalUnit returns the canonical abbreviation for a matched unit string.
 // If no mapping exists the input is returned unchanged.
 func CanonicalUnit(u string) string {
-	if canon, ok := unitCanonicals[u]; ok {
+	lower := strings.ToLower(u)
+	if canon, ok := unitCanonicals[lower]; ok {
 		return canon
 	}
-	return u
+	return lower
 }
 
 // MatchUnit returns the canonical unit string if the token matches a known unit,

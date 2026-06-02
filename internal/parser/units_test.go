@@ -112,3 +112,12 @@ func TestCanonicalUnit_Unknown_PassesThrough(t *testing.T) {
 		t.Errorf("CanonicalUnit(%q) = %q, want input unchanged", "foobar", got)
 	}
 }
+
+func TestCanonicalUnit_MixedCase_NormalisedToLower(t *testing.T) {
+	if got := CanonicalUnit("Gram"); got != "g" {
+		t.Errorf("CanonicalUnit(%q) = %q, want %q", "Gram", got, "g")
+	}
+	if got := CanonicalUnit("G"); got != "g" {
+		t.Errorf("CanonicalUnit(%q) = %q, want %q", "G", got, "g")
+	}
+}

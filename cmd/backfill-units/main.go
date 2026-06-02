@@ -61,20 +61,24 @@ func main() {
 
 		if hasDough {
 			updatedSlice, n := normaliseUnitsSlice(doughRaw)
-			normalised += n
-			firestoreUpdates = append(firestoreUpdates, firestore.Update{
-				Path:  "doughIngredients",
-				Value: updatedSlice,
-			})
+			if n > 0 {
+				normalised += n
+				firestoreUpdates = append(firestoreUpdates, firestore.Update{
+					Path:  "doughIngredients",
+					Value: updatedSlice,
+				})
+			}
 		}
 
 		if hasOther {
 			updatedSlice, n := normaliseUnitsSlice(otherRaw)
-			normalised += n
-			firestoreUpdates = append(firestoreUpdates, firestore.Update{
-				Path:  "otherIngredients",
-				Value: updatedSlice,
-			})
+			if n > 0 {
+				normalised += n
+				firestoreUpdates = append(firestoreUpdates, firestore.Update{
+					Path:  "otherIngredients",
+					Value: updatedSlice,
+				})
+			}
 		}
 
 		if normalised == 0 {
