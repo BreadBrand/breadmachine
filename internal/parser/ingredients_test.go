@@ -387,3 +387,32 @@ func TestParseIngredients_Bunch_RecognisedAsUnit(t *testing.T) {
 		t.Error("expected ParseOK=true")
 	}
 }
+
+func TestParseIngredients_Scald_RoutesToDough(t *testing.T) {
+	groups := []IngredientGroup{
+		{Phase: "dough", Lines: []string{"300 g bread flour", "150 g water"}},
+		{Phase: "scald", Lines: []string{"60 g bread flour", "180 ml boiling water"}},
+	}
+	dough, other := ParseIngredients(groups)
+	if len(dough) != 4 {
+		t.Errorf("scald ingredients should route to doughIngredients, got dough=%d other=%d", len(dough), len(other))
+	}
+	if len(other) != 0 {
+		t.Errorf("expected 0 other ingredients, got %d", len(other))
+	}
+	// Phase is intentionally not preserved for dough ingredients (otherIngredients only).
+	// Baker's percentages work because isFlourPhase("") returns true.
+}
+
+func TestParseIngredients_Tangzhong_RoutesToDough(t *testing.T) {
+	groups := []IngredientGroup{
+		{Phase: "tangzhong", Lines: []string{"30 g bread flour", "150 ml milk"}},
+	}
+	dough, other := ParseIngredients(groups)
+	if len(dough) != 2 {
+		t.Errorf("tangzhong should route to doughIngredients, got %d", len(dough))
+	}
+	if len(other) != 0 {
+		t.Errorf("expected 0 other ingredients, got %d", len(other))
+	}
+}

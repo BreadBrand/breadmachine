@@ -26,13 +26,16 @@ var adjectivePrefixes = []string{"bubbly", "active", "ripe", "fresh", "large", "
 
 // doughPhases routes IngredientGroup phases to doughIngredients.
 var doughPhases = map[string]bool{
-	"dough":       true,
-	"":            true,
+	"dough":         true,
+	"":              true,
 	"starter build": true,
-	"levain":      true,
-	"starter":     true,
-	"pre-ferment": true,
-	"final dough": true,
+	"levain":        true,
+	"starter":       true,
+	"pre-ferment":   true,
+	"final dough":   true,
+	"scald":         true,
+	"tangzhong":     true,
+	"yudane":        true,
 }
 
 // ParseIngredients parses all IngredientGroups and routes each line to either
