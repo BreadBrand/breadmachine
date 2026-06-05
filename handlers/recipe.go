@@ -87,9 +87,9 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	// Normalize ingredients and generate IDs for each entry
 	now := time.Now()
 	doughTotal, normalizedDough := normalizeIngredients(recipe.DoughIngredients)
-	recipe.DoughIngredients = normalizedDough
+	recipe.DoughIngredients = convertToGrams(normalizedDough)
 	_, normalizedOther := normalizeIngredients(recipe.OtherIngredients)
-	recipe.OtherIngredients = normalizedOther
+	recipe.OtherIngredients = convertToGrams(normalizedOther)
 
 	// Populate computed Meta fields; preserve any client-supplied fields (e.g. PrepTime).
 	// YieldGrams is dough weight only — otherIngredients (toppings, fillings) are excluded.

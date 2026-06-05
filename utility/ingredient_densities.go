@@ -35,6 +35,7 @@ var ingredientDensities = []densityEntry{
     {"canola oil", 0.92},
     {"sunflower oil", 0.92},
     {"sourdough", 1.0},
+    {"baking powder", 0.80},
     {"baking soda", 0.88},
     // single word matches last
     {"oil", 0.92},
