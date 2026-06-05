@@ -198,6 +198,33 @@ func TestNormalise_InlineMetadataExpansion(t *testing.T) {
 	}
 }
 
+func TestNormalise_InlineMetadataExpansion_SpaceBeforeColon(t *testing.T) {
+	// Some recipe sites emit "Prep Time :10minutes" with a space before the colon.
+	// expandInlineMetadata must still split these into separate lines.
+	input := "Prep Time :10minutes minutesCook Time :22minutes minutesAdditional Time :10minutes minutes"
+	got, _ := Normalise(input)
+	lines := strings.Split(strings.TrimSpace(got), "\n")
+	if len(lines) < 3 {
+		t.Errorf("space-before-colon metadata not split: got %d line(s):\n%s", len(lines), got)
+	}
+	var hasPrepTime, hasCookTime, hasAdditional bool
+	for _, l := range lines {
+		lower := strings.ToLower(l)
+		if strings.HasPrefix(lower, "prep time") {
+			hasPrepTime = true
+		}
+		if strings.HasPrefix(lower, "cook time") {
+			hasCookTime = true
+		}
+		if strings.HasPrefix(lower, "additional time") {
+			hasAdditional = true
+		}
+	}
+	if !hasPrepTime || !hasCookTime || !hasAdditional {
+		t.Errorf("not all time fields split out; lines:\n%s", got)
+	}
+}
+
 func TestNormalise_CollapseBlankLines(t *testing.T) {
 	input := "line1\n\n\n\nline2"
 	got, _ := Normalise(input)
@@ -210,5 +237,19 @@ func TestNormalise_DegreeSymbolPreserved(t *testing.T) {
 	got, _ := Normalise("Bake at 220°C")
 	if !strings.Contains(got, "°") {
 		t.Errorf("degree symbol was stripped: got %q", got)
+	}
+}
+
+func TestNormalise_RecipeCardUILines_Stripped(t *testing.T) {
+	input := "200 g flour\nCook Mode\nPrevent your screen from going dark\n400 ml water"
+	got, _ := Normalise(input)
+	if strings.Contains(got, "Cook Mode") {
+		t.Error("'Cook Mode' should be stripped")
+	}
+	if strings.Contains(got, "Prevent your screen") {
+		t.Error("'Prevent your screen from going dark' should be stripped")
+	}
+	if !strings.Contains(got, "flour") || !strings.Contains(got, "water") {
+		t.Error("surrounding content should be preserved")
 	}
 }

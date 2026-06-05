@@ -78,14 +78,14 @@ func TestParse_AllRecipesFocaccia(t *testing.T) {
 		t.Error("attribution lines should be stripped")
 	}
 
-	if dto.PrepTime != "20 mins" {
-		t.Errorf("prepTime: expected '20 mins', got %q", dto.PrepTime)
+	if dto.PrepTime != 20 {
+		t.Errorf("prepTime: expected 20, got %d", dto.PrepTime)
 	}
-	if dto.CookTime != "15 mins" {
-		t.Errorf("cookTime: expected '15 mins', got %q", dto.CookTime)
+	if dto.CookTime != 15 {
+		t.Errorf("cookTime: expected 15, got %d", dto.CookTime)
 	}
-	if dto.AdditionalTime != "25 mins" {
-		t.Errorf("additionalTime: expected '25 mins', got %q", dto.AdditionalTime)
+	if dto.AdditionalTime != 25 {
+		t.Errorf("additionalTime: expected 25, got %d", dto.AdditionalTime)
 	}
 	if dto.Servings != "12" {
 		t.Errorf("servings: expected '12', got %q", dto.Servings)
@@ -116,11 +116,11 @@ func TestParse_CleverCarrotSourdough(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if dto.PrepTime == "" {
-		t.Error("prepTime should not be empty")
+	if dto.PrepTime == 0 {
+		t.Error("prepTime should not be zero")
 	}
-	if dto.CookTime == "" {
-		t.Error("cookTime should not be empty")
+	if dto.CookTime == 0 {
+		t.Error("cookTime should not be zero")
 	}
 	if dto.Servings == "" {
 		t.Error("servings should not be empty")

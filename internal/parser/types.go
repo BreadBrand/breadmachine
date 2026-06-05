@@ -9,9 +9,9 @@ type RecipeDTO struct {
 	DoughIngredients []IngredientDTO `json:"doughIngredients"`
 	OtherIngredients []IngredientDTO `json:"otherIngredients"`
 	Servings         string          `json:"servings,omitempty"`
-	PrepTime         string          `json:"prepTime,omitempty"`
-	CookTime         string          `json:"cookTime,omitempty"`
-	AdditionalTime   string          `json:"additionalTime,omitempty"`
+	PrepTime         int             `json:"prepTime,omitempty"`
+	CookTime         int             `json:"cookTime,omitempty"`
+	AdditionalTime   int             `json:"additionalTime,omitempty"`
 	Confidence       ConfidenceMeta  `json:"confidence"`
 }
 

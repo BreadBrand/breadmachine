@@ -113,6 +113,25 @@ func TestParseIngredients_CommaNoteStripped(t *testing.T) {
 	}
 }
 
+func TestParseIngredients_AdjectiveBeforeComma_NounPreserved(t *testing.T) {
+	// "unsalted, frozen butter" — the noun ("butter") comes after the comma.
+	// Stripping at the comma would leave only the adjective "unsalted", which
+	// is not a meaningful ingredient name. The full name must be preserved.
+	cases := []struct {
+		line string
+		name string
+	}{
+		{"276 grams (8 tablespoons) unsalted, frozen butter", "unsalted, frozen butter"},
+		{"113 g salted, softened butter", "salted, softened butter"},
+	}
+	for _, c := range cases {
+		dough, _ := ParseIngredients(doughLines(c.line))
+		if dough[0].IngredientName != c.name {
+			t.Errorf("line=%q: got name=%q, want %q", c.line, dough[0].IngredientName, c.name)
+		}
+	}
+}
+
 func TestParseIngredients_CrossReferenceStripped(t *testing.T) {
 	dough, _ := ParseIngredients(doughLines("100 grams ripe sourdough starter from the build above"))
 	if dough[0].IngredientName != "sourdough starter" {
@@ -414,5 +433,32 @@ func TestParseIngredients_Tangzhong_RoutesToDough(t *testing.T) {
 	}
 	if len(other) != 0 {
 		t.Errorf("expected 0 other ingredients, got %d", len(other))
+	}
+}
+
+func TestParseIngredients_CheckboxPrefix_Stripped(t *testing.T) {
+	// Unicode checkbox squares (▢ □ ☐) appear in recipe prints as shopping-list
+	// checkboxes and must be stripped before quantity/unit parsing.
+	cases := []struct {
+		line string
+		qty  string
+		unit string
+		name string
+	}{
+		{"▢95 g all-purpose flour", "95", "g", "all-purpose flour"},
+		{"▢ 125 g bread flour", "125", "g", "bread flour"},
+		{"□5 g fine sea salt", "5", "g", "fine sea salt"},
+		{"☐0.25 teaspoon baking soda", "0.25", "tsp", "baking soda"},
+	}
+	for _, c := range cases {
+		dough, _ := ParseIngredients(doughLines(c.line))
+		d := dough[0]
+		if d.Quantity != c.qty || d.Unit != c.unit || d.IngredientName != c.name {
+			t.Errorf("line=%q: got qty=%q unit=%q name=%q; want qty=%q unit=%q name=%q",
+				c.line, d.Quantity, d.Unit, d.IngredientName, c.qty, c.unit, c.name)
+		}
+		if !d.ParseOK {
+			t.Errorf("line=%q: expected ParseOK=true", c.line)
+		}
 	}
 }

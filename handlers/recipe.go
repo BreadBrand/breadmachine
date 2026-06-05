@@ -87,16 +87,15 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	// Normalize ingredients and generate IDs for each entry
 	now := time.Now()
 	doughTotal, normalizedDough := normalizeIngredients(recipe.DoughIngredients)
-	recipe.DoughIngredients = normalizedDough
-	otherTotal, normalizedOther := normalizeIngredients(recipe.OtherIngredients)
-	recipe.OtherIngredients = normalizedOther
+	recipe.DoughIngredients = convertToGrams(normalizedDough)
+	_, normalizedOther := normalizeIngredients(recipe.OtherIngredients)
+	recipe.OtherIngredients = convertToGrams(normalizedOther)
 
-	// Populate Meta data
-	recipe.Meta = models.Meta{
-		YieldGrams: doughTotal + otherTotal,
-		CreatedAt:  now,
-		UpdatedAt:  now,
-	}
+	// Populate computed Meta fields; preserve any client-supplied fields (e.g. PrepTime).
+	// YieldGrams is dough weight only — otherIngredients (toppings, fillings) are excluded.
+	recipe.Meta.YieldGrams = doughTotal
+	recipe.Meta.CreatedAt = now
+	recipe.Meta.UpdatedAt = now
 
 	// Calculate baker's percentages into each ingredient
 	recipe.CalculateBakerPercentages()
