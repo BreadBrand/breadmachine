@@ -27,12 +27,19 @@ var (
 	reScalingArtifact   = regexp.MustCompile(`\b\d+x\b`)
 	reBrowserHeader     = regexp.MustCompile(`^\d{1,2}/\d{1,2}/\d{2,4},\s+\d{1,2}:\d{2}\s+(AM|PM)\s+`)
 	rePageFraction      = regexp.MustCompile(`^about:blank\s+\d+/\d+$`)
-	reMetadataPair      = regexp.MustCompile(`(?i)(Prep Time|Cook Time|Total Time|Additional Time|Servings|Yield|Category|Cuisine|Diet|Author):\s*[^\s]`)
+	reMetadataPair      = regexp.MustCompile(`(?i)(Prep Time|Cook Time|Total Time|Additional Time|Servings|Yield|Category|Cuisine|Diet|Author)\s*:\s*[^\s]`)
 )
 
 var unicodeFractions = map[string]string{
 	"½": "1/2", "¼": "1/4", "¾": "3/4",
 	"⅓": "1/3", "⅔": "2/3", "⅛": "1/8",
+}
+
+// recipeCardUILines are exact-match lines injected by recipe card plugins
+// (e.g. "Cook Mode" keep-awake toggles). They carry no recipe content.
+var recipeCardUILines = map[string]bool{
+	"cook mode":                        true,
+	"prevent your screen from going dark": true,
 }
 
 var attributionPrefixes = []string{
@@ -133,6 +140,11 @@ func Normalise(input string) (string, error) {
 		if lower == "about:blank" ||
 			rePageFraction.MatchString(lower) ||
 			reBrowserHeader.MatchString(trimmedLine) {
+			continue
+		}
+
+		// Recipe card UI lines (keep-awake toggles, etc.)
+		if recipeCardUILines[lower] {
 			continue
 		}
 

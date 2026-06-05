@@ -6,9 +6,10 @@ import (
 )
 
 var (
-	reQuantityAnchor = regexp.MustCompile(`^(\d+\s+\d+/\d+|\d+(?:\.\d*)?(?:/\d+)?)\s*`)
-	reLeadingParen   = regexp.MustCompile(`^\([^)]*\)\s*`)
-	reBulletPrefix   = regexp.MustCompile(`^[-*•—–]\s+`)
+	reQuantityAnchor  = regexp.MustCompile(`^(\d+\s+\d+/\d+|\d+(?:\.\d*)?(?:/\d+)?)\s*`)
+	reLeadingParen    = regexp.MustCompile(`^\([^)]*\)\s*`)
+	reBulletPrefix    = regexp.MustCompile(`^[-*•—–]\s+`)
+	reCheckboxPrefix  = regexp.MustCompile(`^[▢□☐]\s*`)
 	reCrossRef       = regexp.MustCompile(`(?i)\s*(from the build above|see note|recipe follows|from above)\s*`)
 	reToppingLine    = regexp.MustCompile(`(?i)\btopping\b`)
 )
@@ -64,8 +65,9 @@ func parseIngredientLine(raw string) IngredientDTO {
 	dto := IngredientDTO{RawLine: raw}
 	line := raw
 
-	// 1. Strip bullet prefix
+	// 1. Strip bullet and checkbox prefixes
 	line = reBulletPrefix.ReplaceAllString(line, "")
+	line = reCheckboxPrefix.ReplaceAllString(line, "")
 	line = strings.TrimSpace(line)
 
 	// 2. Yeast alternatives — take first option before "or", keep full RawLine
@@ -168,11 +170,19 @@ func parseIngredientLine(raw string) IngredientDTO {
 		}
 	}
 
-	// 9. Strip comma-separated notes (rest after first comma has no quantity)
+	// 9. Strip comma-separated notes (rest after first comma has no quantity).
+	// Guard: skip when the pre-comma text is a single word ending in a
+	// past-participle suffix (-ed, -en) — it's an adjective and the noun
+	// likely follows the comma (e.g. "unsalted, frozen butter").
 	if idx := strings.Index(line, ","); idx != -1 {
+		before := strings.TrimSpace(line[:idx])
 		rest := strings.TrimSpace(line[idx+1:])
-		if !reQuantityAnchor.MatchString(rest) {
-			line = strings.TrimSpace(line[:idx])
+		beforeWords := strings.Fields(before)
+		isAdjectiveOnly := len(beforeWords) == 1 &&
+			(strings.HasSuffix(strings.ToLower(beforeWords[0]), "ed") ||
+				strings.HasSuffix(strings.ToLower(beforeWords[0]), "en"))
+		if !reQuantityAnchor.MatchString(rest) && !isAdjectiveOnly {
+			line = before
 		}
 	}
 

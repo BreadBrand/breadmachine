@@ -91,12 +91,10 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	otherTotal, normalizedOther := normalizeIngredients(recipe.OtherIngredients)
 	recipe.OtherIngredients = normalizedOther
 
-	// Populate Meta data
-	recipe.Meta = models.Meta{
-		YieldGrams: doughTotal + otherTotal,
-		CreatedAt:  now,
-		UpdatedAt:  now,
-	}
+	// Populate computed Meta fields; preserve any client-supplied fields (e.g. PrepTime).
+	recipe.Meta.YieldGrams = doughTotal + otherTotal
+	recipe.Meta.CreatedAt = now
+	recipe.Meta.UpdatedAt = now
 
 	// Calculate baker's percentages into each ingredient
 	recipe.CalculateBakerPercentages()
