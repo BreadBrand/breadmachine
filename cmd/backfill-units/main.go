@@ -8,7 +8,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
-	"github.com/RedBrand88/breadmachine/internal/parser"
+	"github.com/BreadBrand/breadmachine/internal/parser"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
