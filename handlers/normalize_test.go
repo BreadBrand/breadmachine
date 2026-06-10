@@ -3,7 +3,7 @@ package handlers
 import (
 	"testing"
 
-	"github.com/RedBrand88/breadmachine/models"
+	"github.com/BreadBrand/breadmachine/models"
 )
 
 // makeIng is a test helper that builds a models.Ingredient with the fields

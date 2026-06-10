@@ -1,6 +1,6 @@
 package handlers
 
-import "github.com/RedBrand88/breadmachine/models"
+import "github.com/BreadBrand/breadmachine/models"
 
 func isMassUnit(unit string) bool {
 	switch unit {

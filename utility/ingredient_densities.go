@@ -47,7 +47,33 @@ var ingredientDensities = []densityEntry{
 	{"rolled oats", 0.36},
 	{"cornmeal", 0.60},
 	{"sourdough", 1.0},
+	// legumes — specific first
+	{"red lentils", 0.79},
+	{"green lentils", 0.79},
+	{"black lentils", 0.79},
+	// binding agents
+	{"psyllium husk", 0.25},
+	// cheese — specific first, generic last
+	{"cream cheese", 0.98},
+	{"mozzarella", 0.47},
+	{"cheddar", 0.47},
+	{"parmesan", 0.37},
+	// seeds — specific first
+	{"sesame seeds", 0.60},
+	{"chia seeds", 0.72},
+	{"flax seeds", 0.76},
+	{"poppy seeds", 0.56},
+	// herbs and aromatics — specific first
+	{"dried garlic", 0.40},
+	{"garlic powder", 0.40},
+	{"onion powder", 0.37},
+	{"dried dill", 0.35},
+	{"dill", 0.09},
 	// single-word / catch-all matches — must come after multi-word entries
+	{"lentil", 0.79},
+	{"cheese", 0.47},
+	{"seed", 0.60},
+	{"garlic", 0.40},
 	{"lard", 0.92},
 	{"ghee", 0.90},
 	{"flour", 0.53},
@@ -74,6 +100,31 @@ func LookupDensity(ingredientName string) float64 {
 	for _, entry := range ingredientDensities {
 		if strings.Contains(normalized, entry.keyword) {
 			return entry.density
+		}
+	}
+	return 0
+}
+
+type countWeightEntry struct {
+	keyword     string
+	gramsPerUnit float64
+}
+
+// countWeightTable maps ingredient keywords to grams per single unit (count).
+var countWeightTable = []countWeightEntry{
+	{"egg", 50},
+}
+
+// LookupCountWeight returns grams per single unit for count-based ingredients,
+// or 0 if the ingredient is not recognized.
+func LookupCountWeight(ingredientName string) float64 {
+	normalized := strings.ToLower(ingredientName)
+	normalized = regexp.MustCompile(`\(.*?\)`).ReplaceAllString(normalized, "")
+	normalized = strings.TrimSpace(normalized)
+
+	for _, entry := range countWeightTable {
+		if strings.Contains(normalized, entry.keyword) {
+			return entry.gramsPerUnit
 		}
 	}
 	return 0

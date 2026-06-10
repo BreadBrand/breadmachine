@@ -21,6 +21,7 @@ type YeastType string
 const (
 	YeastTypeDry       YeastType = "dry"
 	YeastTypeSourdough YeastType = "sourdough"
+	YeastTypeNone      YeastType = "none"
 )
 
 type Ingredient struct {
@@ -57,10 +58,33 @@ type Recipe struct {
 	YeastType        YeastType    `json:"yeastType,omitempty" firestore:"yeastType,omitempty"`
 }
 
-// CalculateBakerPercentages computes baker's percentages for DoughIngredients only.
-func (r *Recipe) CalculateBakerPercentages() {
-	var totalFlour float64
+// baseIngredientKeywords lists ingredient name substrings that serve as the
+// baker's-math base (100%) in specialty breads. "flour" covers the common case;
+// the rest handle grain-free and legume-based recipes.
+var baseIngredientKeywords = []string{
+	"flour",
+	"lentil",
+	"oat",
+	"cauliflower",
+	"chickpea",
+	"tapioca",
+}
 
+func isBaseIngredient(name string) bool {
+	lower := strings.ToLower(name)
+	for _, kw := range baseIngredientKeywords {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+// CalculateBakerPercentages computes baker's percentages for DoughIngredients only.
+// Base weight is the sum of any ingredient whose name matches a known base keyword
+// (flour, lentil, oat, cauliflower, chickpea, tapioca). Recipes with no matching
+// base ingredient get zero percentages.
+func (r *Recipe) CalculateBakerPercentages() {
 	isFlourPhase := func(p Phase) bool {
 		switch strings.ToLower(string(p)) {
 		case "dough", "scald", "tangzhong", "yudane", "starter build", "levain", "final dough", "":
@@ -70,15 +94,16 @@ func (r *Recipe) CalculateBakerPercentages() {
 		}
 	}
 
+	var totalBase float64
 	for _, ing := range r.DoughIngredients {
-		if isFlourPhase(ing.Phase) && strings.Contains(strings.ToLower(ing.IngredientName), "flour") {
-			totalFlour += ing.Grams
+		if isFlourPhase(ing.Phase) && isBaseIngredient(ing.IngredientName) {
+			totalBase += ing.Grams
 		}
 	}
 
 	for i := range r.DoughIngredients {
-		if totalFlour > 0 && isFlourPhase(r.DoughIngredients[i].Phase) {
-			r.DoughIngredients[i].BakerPercentage = (r.DoughIngredients[i].Grams / totalFlour) * 100
+		if totalBase > 0 && isFlourPhase(r.DoughIngredients[i].Phase) {
+			r.DoughIngredients[i].BakerPercentage = (r.DoughIngredients[i].Grams / totalBase) * 100
 		} else {
 			r.DoughIngredients[i].BakerPercentage = 0
 		}

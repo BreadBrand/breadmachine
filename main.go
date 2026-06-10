@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/RedBrand88/breadmachine/handlers"
+	"github.com/BreadBrand/breadmachine/handlers"
 )
 
 func main() {

@@ -1,4 +1,4 @@
-module github.com/RedBrand88/breadmachine
+module github.com/BreadBrand/breadmachine
 
 go 1.23.0
 

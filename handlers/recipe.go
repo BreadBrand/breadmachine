@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/RedBrand88/breadmachine/models"
-	"github.com/RedBrand88/breadmachine/utility"
+	"github.com/BreadBrand/breadmachine/models"
+	"github.com/BreadBrand/breadmachine/utility"
 	"github.com/google/uuid"
 )
 
@@ -74,8 +74,9 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	// Validate yeastType if provided
 	if recipe.YeastType != "" &&
 		recipe.YeastType != models.YeastTypeDry &&
-		recipe.YeastType != models.YeastTypeSourdough {
-		http.Error(w, "Invalid yeastType: must be 'dry' or 'sourdough'", http.StatusBadRequest)
+		recipe.YeastType != models.YeastTypeSourdough &&
+		recipe.YeastType != models.YeastTypeNone {
+		http.Error(w, "Invalid yeastType: must be 'dry', 'sourdough', or 'none'", http.StatusBadRequest)
 		return
 	}
 
@@ -162,12 +163,18 @@ func normalizeIngredients(ingredients []models.Ingredient) (float64, []models.In
 
 		unit := strings.ToLower(ing.Unit)
 
-		if ing.Grams == 0 && ing.Quantity > 0 {
-			mult := unitToGrams[unit]
-			if mult == 0 {
-				mult = 1
+		if ing.Quantity > 0 {
+			if unit == "count" {
+				// Always recompute count ingredients — stored grams may be stale if
+				// the per-unit weight table changed since the recipe was first saved.
+				ing.Grams = ing.Quantity * utility.LookupCountWeight(ing.IngredientName)
+			} else if ing.Grams == 0 {
+				mult := unitToGrams[unit]
+				if mult == 0 {
+					mult = 1
+				}
+				ing.Grams = ing.Quantity * mult
 			}
-			ing.Grams = ing.Quantity * mult
 		}
 
 		if ing.DensityGPerMl == 0 {

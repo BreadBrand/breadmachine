@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 	firebase "firebase.google.com/go"
-	"github.com/RedBrand88/breadmachine/utility"
+	"github.com/BreadBrand/breadmachine/utility"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
@@ -91,8 +92,8 @@ func main() {
 	fmt.Printf("\ndone — updated %d recipes, skipped %d\n", updated, skipped)
 }
 
-// backfillSlice sets densityGPerMl on any ingredient that has it missing or zero.
-// Returns the updated slice and a count of how many were filled.
+// backfillSlice corrects densityGPerMl and grams for count-unit ingredients.
+// Returns the updated slice and a count of how many fields were fixed.
 func backfillSlice(ings []interface{}) ([]interface{}, int) {
 	filled := 0
 	result := make([]interface{}, len(ings))
@@ -103,14 +104,32 @@ func backfillSlice(ings []interface{}) ([]interface{}, int) {
 			continue
 		}
 
+		name, _ := ingMap["ingredientName"].(string)
+
 		existing, _ := ingMap["densityGPerMl"].(float64)
 		if existing == 0 {
-			name, _ := ingMap["ingredientName"].(string)
 			density := utility.LookupDensity(name)
 			ingMap["densityGPerMl"] = density
 			if density > 0 {
-				fmt.Printf("  %s → %.3f\n", name, density)
+				fmt.Printf("  %s → density %.3f\n", name, density)
 				filled++
+			}
+		}
+
+		unit, _ := ingMap["unit"].(string)
+		if strings.ToLower(unit) == "count" {
+			qty, _ := ingMap["quantity"].(float64)
+			if qty > 0 {
+				perUnit := utility.LookupCountWeight(name)
+				if perUnit > 0 {
+					correct := qty * perUnit
+					stored, _ := ingMap["grams"].(float64)
+					if stored != correct {
+						ingMap["grams"] = correct
+						fmt.Printf("  %s → grams %.0f (was %.0f)\n", name, correct, stored)
+						filled++
+					}
+				}
 			}
 		}
 

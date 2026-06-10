@@ -9,7 +9,7 @@ import (
 	"firebase.google.com/go/auth"
 	"google.golang.org/api/option"
 
-	"github.com/RedBrand88/breadmachine/models"
+	"github.com/BreadBrand/breadmachine/models"
 )
 
 var client *firestore.Client

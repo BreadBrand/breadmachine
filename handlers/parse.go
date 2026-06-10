@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/RedBrand88/breadmachine/internal/parser"
+	"github.com/BreadBrand/breadmachine/internal/parser"
 )
 
 type apiError struct {
