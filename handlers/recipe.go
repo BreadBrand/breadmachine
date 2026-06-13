@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/BreadBrand/breadmachine/internal/parser"
 	"github.com/BreadBrand/breadmachine/models"
 	"github.com/BreadBrand/breadmachine/utility"
 	"github.com/google/uuid"
@@ -161,7 +162,8 @@ func normalizeIngredients(ingredients []models.Ingredient) (float64, []models.In
 			ing.ID = uuid.NewString()
 		}
 
-		unit := strings.ToLower(ing.Unit)
+		unit := parser.CanonicalUnit(strings.ToLower(ing.Unit))
+		ing.Unit = unit
 
 		if ing.Quantity > 0 {
 			if unit == "count" {
