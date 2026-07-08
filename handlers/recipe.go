@@ -100,7 +100,7 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	recipe.Meta.UpdatedAt = now
 
 	// Calculate baker's percentages into each ingredient
-	recipe.CalculateBakerPercentages()
+	models.CalculateBakerPercentages(recipe.DoughIngredients)
 
 	// Persist the recipe document to Firestore
 	if _, err := docRef.Set(r.Context(), recipe); err != nil {
