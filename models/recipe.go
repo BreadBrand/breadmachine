@@ -80,11 +80,13 @@ func isBaseIngredient(name string) bool {
 	return false
 }
 
-// CalculateBakerPercentages computes baker's percentages for DoughIngredients only.
-// Base weight is the sum of any ingredient whose name matches a known base keyword
-// (flour, lentil, oat, cauliflower, chickpea, tapioca). Recipes with no matching
-// base ingredient get zero percentages.
-func (r *Recipe) CalculateBakerPercentages() {
+// CalculateBakerPercentages computes baker's percentages in place for the given
+// ingredients. Call sites should pass DoughIngredients only — OtherIngredients
+// (toppings, fillings) are not part of baker's math. Base weight is the sum of any
+// ingredient whose name matches a known base keyword (flour, lentil, oat,
+// cauliflower, chickpea, tapioca). Recipes with no matching base ingredient get
+// zero percentages.
+func CalculateBakerPercentages(ingredients []Ingredient) {
 	isFlourPhase := func(p Phase) bool {
 		switch strings.ToLower(string(p)) {
 		case "dough", "scald", "tangzhong", "yudane", "starter build", "levain", "final dough", "":
@@ -95,17 +97,17 @@ func (r *Recipe) CalculateBakerPercentages() {
 	}
 
 	var totalBase float64
-	for _, ing := range r.DoughIngredients {
+	for _, ing := range ingredients {
 		if isFlourPhase(ing.Phase) && isBaseIngredient(ing.IngredientName) {
 			totalBase += ing.Grams
 		}
 	}
 
-	for i := range r.DoughIngredients {
-		if totalBase > 0 && isFlourPhase(r.DoughIngredients[i].Phase) {
-			r.DoughIngredients[i].BakerPercentage = (r.DoughIngredients[i].Grams / totalBase) * 100
+	for i := range ingredients {
+		if totalBase > 0 && isFlourPhase(ingredients[i].Phase) {
+			ingredients[i].BakerPercentage = (ingredients[i].Grams / totalBase) * 100
 		} else {
-			r.DoughIngredients[i].BakerPercentage = 0
+			ingredients[i].BakerPercentage = 0
 		}
 	}
 }

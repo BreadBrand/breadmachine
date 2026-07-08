@@ -42,7 +42,7 @@ func main() {
 	fmt.Printf("loaded: %s (yeastType=%q)\n", recipe.Title, recipe.YeastType)
 
 	recipe.YeastType = models.YeastTypeNone
-	recipe.CalculateBakerPercentages()
+	models.CalculateBakerPercentages(recipe.DoughIngredients)
 	recipe.Meta.UpdatedAt = time.Now()
 
 	if _, err := docRef.Set(ctx, recipe); err != nil {
