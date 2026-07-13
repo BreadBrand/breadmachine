@@ -18,3 +18,4 @@
 /docs/
 .claude/*.md
 .claude/agents/*.md
+.claude
