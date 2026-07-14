@@ -3,6 +3,8 @@ package handlers
 import (
 	"context"
 	"log"
+	"net/http"
+	"strings"
 
 	"cloud.google.com/go/firestore"
 	"firebase.google.com/go"
@@ -35,6 +37,23 @@ func InitFirebase() error {
 
 	log.Println("Firebase initialized successfully")
 	return nil
+}
+
+// authenticate verifies the Firebase ID token in the request's Authorization
+// header (format "Bearer <token>") and returns the caller's UID. ok is false
+// if the header is missing, malformed, or the token fails verification —
+// callers decide how to report that themselves, since each protected route
+// currently returns a different error shape (see CreateRecipe vs. ParseHandler).
+func authenticate(r *http.Request) (uid string, ok bool) {
+	tokenString := strings.TrimSpace(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+	if tokenString == "" {
+		return "", false
+	}
+	token, err := authClient.VerifyIDToken(r.Context(), tokenString)
+	if err != nil {
+		return "", false
+	}
+	return token.UID, true
 }
 
 // SaveRecipe saves a recipe to Firebase

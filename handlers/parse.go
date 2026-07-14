@@ -22,14 +22,7 @@ func writeError(w http.ResponseWriter, status int, code, message string) {
 // ParseHandler handles POST /api/recipes/parse.
 // Accepts JSON body {"text": "..."} and returns a RecipeDTO.
 func ParseHandler(w http.ResponseWriter, r *http.Request) {
-	// Auth — same pattern as CreateRecipe
-	authHeader := r.Header.Get("Authorization")
-	tokenString := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
-	if tokenString == "" {
-		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Please sign in to import recipes.")
-		return
-	}
-	if _, err := authClient.VerifyIDToken(r.Context(), tokenString); err != nil {
+	if _, ok := authenticate(r); !ok {
 		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Please sign in to import recipes.")
 		return
 	}

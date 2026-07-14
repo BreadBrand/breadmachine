@@ -42,25 +42,9 @@ func GetAllRecipes(w http.ResponseWriter, r *http.Request) {
 
 // CreateRecipe handles recipe creation
 func CreateRecipe(w http.ResponseWriter, r *http.Request) {
-	// Get Authorization header
-	authHeader := r.Header.Get("Authorization")
-	if authHeader == "" {
-		http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
-		return
-	}
-
-	// Expect "Bearer <token>"
-	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-	tokenString = strings.TrimSpace(tokenString)
-	if tokenString == "" {
-		http.Error(w, "Invalid Authorization header", http.StatusUnauthorized)
-		return
-	}
-
-	// Verify the Firebase ID token
-	token, err := authClient.VerifyIDToken(r.Context(), tokenString)
-	if err != nil {
-		http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+	uid, ok := authenticate(r)
+	if !ok {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -84,7 +68,7 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	// Assign Firestore-generated ID for this recipe
 	docRef := client.Collection("Recipes").NewDoc()
 	recipe.ID = docRef.ID
-	recipe.UserID = token.UID
+	recipe.UserID = uid
 
 	// Normalize ingredients and generate IDs for each entry
 	now := time.Now()
@@ -113,43 +97,59 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(recipe)
 }
 
-// RecipeHandler processes GET and DELETE for a single recipe
-func RecipeHandler(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/recipes/")
-	if id == "" {
-		http.Error(w, "Missing recipe ID", http.StatusBadRequest)
+// GetRecipe returns a single recipe by ID.
+func GetRecipe(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+
+	docRef := client.Collection("Recipes").Doc(id)
+	docSnap, err := docRef.Get(r.Context())
+	if err != nil || !docSnap.Exists() {
+		http.Error(w, "Recipe not found", http.StatusNotFound)
 		return
 	}
 
-	switch r.Method {
-	case "GET":
-		docRef := client.Collection("Recipes").Doc(id)
-		docSnap, err := docRef.Get(r.Context())
-		if err != nil || !docSnap.Exists() {
-			http.Error(w, "Recipe not found", http.StatusNotFound)
-			return
-		}
-
-		var recipe models.Recipe
-		if err := docSnap.DataTo(&recipe); err != nil {
-			http.Error(w, "Error parsing recipe", http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(recipe)
-
-	case "DELETE":
-		docRef := client.Collection("Recipes").Doc(id)
-		if _, err := docRef.Delete(r.Context()); err != nil {
-			http.Error(w, "Recipe not found", http.StatusNotFound)
-			return
-		}
-
-		w.WriteHeader(http.StatusNoContent)
-
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	var recipe models.Recipe
+	if err := docSnap.DataTo(&recipe); err != nil {
+		http.Error(w, "Error parsing recipe", http.StatusInternalServerError)
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(recipe)
+}
+
+// DeleteRecipe deletes a single recipe by ID. The caller must be authenticated
+// and must own the recipe (recipe.UserID must match the verified token's UID).
+func DeleteRecipe(w http.ResponseWriter, r *http.Request) {
+	uid, ok := authenticate(r)
+	if !ok {
+		writeError(w, http.StatusUnauthorized, "UNAUTHORIZED", "Please sign in to delete a recipe.")
+		return
+	}
+
+	id := r.PathValue("id")
+	docRef := client.Collection("Recipes").Doc(id)
+	docSnap, err := docRef.Get(r.Context())
+	if err != nil || !docSnap.Exists() {
+		writeError(w, http.StatusNotFound, "NOT_FOUND", "Recipe not found.")
+		return
+	}
+
+	var recipe models.Recipe
+	if err := docSnap.DataTo(&recipe); err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Something went wrong.")
+		return
+	}
+	if recipe.UserID != uid {
+		writeError(w, http.StatusForbidden, "FORBIDDEN", "You don't have permission to delete this recipe.")
+		return
+	}
+
+	if _, err := docRef.Delete(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Failed to delete recipe.")
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func normalizeIngredients(ingredients []models.Ingredient) (float64, []models.Ingredient) {
@@ -186,15 +186,4 @@ func normalizeIngredients(ingredients []models.Ingredient) (float64, []models.In
 		totalDough += ing.Grams
 	}
 	return totalDough, ingredients
-}
-
-func RecipesHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		GetAllRecipes(w, r)
-	case http.MethodPost:
-		CreateRecipe(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-	}
 }
