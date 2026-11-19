@@ -306,3 +306,47 @@ func TestParse_MetadataLabelsInsideIngredientsDoNotBecomeIngredients(t *testing.
 		t.Errorf("prepTime: expected 20, got %d", dto.PrepTime)
 	}
 }
+
+func TestParse_Author(t *testing.T) {
+	cases := []struct {
+		name    string
+		fixture string
+		want    string
+	}{
+		{"submitted by line", "allrecipes_focaccia.txt", "Terri McCarrell"},
+		{"inline with other metadata", "clevercarrot_sourdough_sandwich.txt", "Emilie Raffa"},
+		{"no credit in the text", "palouse_whole_wheat_sourdough.txt", ""},
+	}
+	for _, c := range cases {
+		dto, err := Parse(loadFixture(t, c.fixture))
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if dto.Author != c.want {
+			t.Errorf("%s: author = %q, want %q", c.name, dto.Author, c.want)
+		}
+	}
+}
+
+func TestParse_AuthorOnNextLineDoesNotLeakIntoDescription(t *testing.T) {
+	dto, err := Parse("Bread\n\nAuthor:\nJane Doe\n\nIngredients\n500 g flour\nDirections\nBake it.\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dto.Author != "Jane Doe" {
+		t.Errorf("author = %q, want %q", dto.Author, "Jane Doe")
+	}
+	if dto.Description != "" {
+		t.Errorf("description = %q, want empty", dto.Description)
+	}
+}
+
+func TestParse_TestedByStaysOutOfTheAuthor(t *testing.T) {
+	dto, err := Parse("Bread\nTested by Allrecipes Test Kitchen\n\nIngredients\n500 g flour\nDirections\nBake it.\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dto.Author != "" {
+		t.Errorf("author = %q, want empty", dto.Author)
+	}
+}

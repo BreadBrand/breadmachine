@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"unicode/utf8"
 
+	"github.com/BreadBrand/breadmachine/internal/parser"
 	"github.com/BreadBrand/breadmachine/models"
 )
 
 const (
 	maxMetaMinutes    = 7 * 24 * 60
 	maxServingsLength = 100
+	maxAuthorLength   = parser.MaxAuthorLength
 )
 
 func validateMeta(meta models.Meta) error {
@@ -29,6 +31,9 @@ func validateMeta(meta models.Meta) error {
 	}
 	if utf8.RuneCountInString(meta.Servings) > maxServingsLength {
 		return errors.New("servings is too long")
+	}
+	if utf8.RuneCountInString(meta.Author) > maxAuthorLength {
+		return errors.New("author is too long")
 	}
 	return nil
 }
