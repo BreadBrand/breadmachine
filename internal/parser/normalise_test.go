@@ -253,3 +253,69 @@ func TestNormalise_RecipeCardUILines_Stripped(t *testing.T) {
 		t.Error("surrounding content should be preserved")
 	}
 }
+
+func TestNormalise_MetadataLabelJoinedWithValueOnNextLine(t *testing.T) {
+	input := "Bread\nPrep Time:\n2 hours\nCook Time:\n2.5 hours\nServings:\n5\nIngredients\n500 g flour"
+	got, _ := Normalise(input)
+	want := "Bread\nPrep Time: 2 hours\nCook Time: 2.5 hours\nServings: 5\nIngredients\n500 g flour"
+	if got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestNormalise_MetadataLabelWithoutColonJoinedWithValue(t *testing.T) {
+	input := "Bread\nPrep Time\n20 mins\nCook Time\n1 hour 15 mins\nIngredients\n500 g flour"
+	got, _ := Normalise(input)
+	want := "Bread\nPrep Time: 20 mins\nCook Time: 1 hour 15 mins\nIngredients\n500 g flour"
+	if got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestNormalise_MetadataLabelJoinedAcrossBlankLine(t *testing.T) {
+	input := "Bread\nPrep Time:\n\n20 mins\nIngredients\n500 g flour"
+	got, _ := Normalise(input)
+	want := "Bread\nPrep Time: 20 mins\nIngredients\n500 g flour"
+	if got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestNormalise_MetadataLabelsOnOneLineLeftAlone(t *testing.T) {
+	input := "Bread\nPrep Time: 20 mins\nServings: 5\nIngredients\n500 g flour"
+	got, _ := Normalise(input)
+	if got != input {
+		t.Errorf("same-line metadata changed:\n%s", got)
+	}
+}
+
+func TestNormalise_DanglingMetadataLabelDropped(t *testing.T) {
+	cases := map[string]string{
+		"before section header": "Bread\nServings:\nIngredients\n500 g flour",
+		"before another label":  "Bread\nPrep Time:\nCook Time: 20 mins\nIngredients\n500 g flour",
+		"before a bare label":   "Bread\nPrep Time:\nCook Time:\n20 mins\nIngredients\n500 g flour",
+		"at end of input":       "Bread\nIngredients\n500 g flour\nServings:",
+		"before long text":      "Bread\nYield:\nThis recipe makes a rustic loaf with a crackly crust and a soft crumb inside.\nIngredients\n500 g flour",
+	}
+	for name, input := range cases {
+		got, _ := Normalise(input)
+		for _, line := range strings.Split(got, "\n") {
+			trimmed := strings.TrimSpace(line)
+			if strings.HasSuffix(trimmed, ":") {
+				t.Errorf("%s: label with no value kept: %q\nfull output:\n%s", name, line, got)
+			}
+		}
+		if !strings.Contains(got, "500 g flour") {
+			t.Errorf("%s: ingredient lost:\n%s", name, got)
+		}
+	}
+}
+
+func TestNormalise_MetadataLabelDoesNotSwallowSectionHeader(t *testing.T) {
+	input := "Bread\nServings:\nIngredients\n500 g flour"
+	got, _ := Normalise(input)
+	want := "Bread\nIngredients\n500 g flour"
+	if got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}

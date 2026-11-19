@@ -7,10 +7,12 @@ import (
 	"unicode/utf8"
 )
 
+const metaLabels = `Prep Time|Cook Time|Total Time|Additional Time|Servings|Yield|Category|Cuisine|Diet|Author|Baking Time|Bake Time|Rise Time|Rest Time|Chill Time|Preparation Time`
+
 var (
 	reQuantityStart             = regexp.MustCompile(`^\d`)
 	reInstructionNum            = regexp.MustCompile(`^\d+[\.\)]\s`)
-	reMetaField                 = regexp.MustCompile(`(?i)^(Prep Time|Cook Time|Total Time|Additional Time|Servings|Yield|Category|Cuisine|Diet|Author|Baking Time|Bake Time|Rise Time|Rest Time|Chill Time|Preparation Time)[\s:]+`)
+	reMetaField                 = regexp.MustCompile(`(?i)^(` + metaLabels + `)[\s:]+`)
 	reTrailingIngredientsSuffix = regexp.MustCompile(`(?i)\s+ingredients\s*$`)
 	reHasDigit                  = regexp.MustCompile(`\d`)
 )

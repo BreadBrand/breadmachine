@@ -123,6 +123,60 @@ func TestCreateRecipe_Emulator_InvalidYeastType(t *testing.T) {
 	}
 }
 
+func TestCreateRecipe_Emulator_InvalidMeta(t *testing.T) {
+	requireEmulators(t)
+	token := mintIDToken(t, "create-invalid-meta-user")
+
+	body, _ := json.Marshal(models.Recipe{Title: "Bad Meta Loaf", Meta: models.Meta{PrepTime: -5}})
+	req := httptest.NewRequest(http.MethodPost, "/api/recipes", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	CreateRecipe(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status: want 400, got %d", w.Code)
+	}
+}
+
+func TestCreateRecipe_Emulator_PersistsClientMeta(t *testing.T) {
+	requireEmulators(t)
+	token := mintIDToken(t, "create-meta-user")
+
+	reqBody := models.Recipe{
+		Title: "Meta Loaf",
+		Meta:  models.Meta{Servings: "5", PrepTime: 120, CookTime: 150, AdditionalTime: 30},
+	}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest(http.MethodPost, "/api/recipes", bytes.NewReader(body))
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	CreateRecipe(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status: want 200, got %d, body: %s", w.Code, w.Body.String())
+	}
+
+	var created models.Recipe
+	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	if created.Meta.Servings != "5" || created.Meta.PrepTime != 120 || created.Meta.CookTime != 150 || created.Meta.AdditionalTime != 30 {
+		t.Errorf("meta not preserved: %+v", created.Meta)
+	}
+
+	docSnap, err := client.Collection("Recipes").Doc(created.ID).Get(context.Background())
+	if err != nil {
+		t.Fatalf("created recipe not found in Firestore: %v", err)
+	}
+	var stored models.Recipe
+	if err := docSnap.DataTo(&stored); err != nil {
+		t.Fatalf("failed to read stored recipe: %v", err)
+	}
+	if stored.Meta.PrepTime != 120 || stored.Meta.CookTime != 150 {
+		t.Errorf("stored meta times: want prep=120 cook=150, got %+v", stored.Meta)
+	}
+}
+
 func TestCreateRecipe_Emulator_Success_PersistsNormalizedRecipe(t *testing.T) {
 	requireEmulators(t)
 	uid := "create-success-user"

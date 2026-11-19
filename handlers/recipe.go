@@ -65,6 +65,11 @@ func CreateRecipe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := validateMeta(recipe.Meta); err != nil {
+		http.Error(w, "Invalid meta: "+err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	// Assign Firestore-generated ID for this recipe
 	docRef := client.Collection("Recipes").NewDoc()
 	recipe.ID = docRef.ID

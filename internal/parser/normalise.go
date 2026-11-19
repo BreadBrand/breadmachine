@@ -27,6 +27,8 @@ var (
 	reScalingArtifact   = regexp.MustCompile(`\b\d+x\b`)
 	reBrowserHeader     = regexp.MustCompile(`^\d{1,2}/\d{1,2}/\d{2,4},\s+\d{1,2}:\d{2}\s+(AM|PM)\s+`)
 	rePageFraction      = regexp.MustCompile(`^about:blank\s+\d+/\d+$`)
+	reMetaLabelOnly     = regexp.MustCompile(`(?i)^(` + metaLabels + `)\s*:?\s*$`)
+	reMetaLabelLead     = regexp.MustCompile(`(?i)^(` + metaLabels + `)\b`)
 	reMetadataPair      = regexp.MustCompile(`(?i)(Prep Time|Cook Time|Total Time|Additional Time|Servings|Yield|Category|Cuisine|Diet|Author)\s*:\s*[^\s]`)
 )
 
@@ -197,7 +199,52 @@ func Normalise(input string) (string, error) {
 		out = append(out, expanded...)
 	}
 
+	out = joinMetadataLabels(out)
+
 	return strings.Trim(strings.Join(out, "\n"), "\n"), nil
+}
+
+const maxMetadataValueLength = 60
+
+func joinMetadataLabels(lines []string) []string {
+	var result []string
+	for i := 0; i < len(lines); i++ {
+		match := reMetaLabelOnly.FindStringSubmatch(strings.TrimSpace(lines[i]))
+		if match == nil {
+			result = append(result, lines[i])
+			continue
+		}
+		next := nextNonBlankLine(lines, i+1)
+		if next == -1 || !isMetadataValue(strings.TrimSpace(lines[next])) {
+			continue
+		}
+		result = append(result, match[1]+": "+strings.TrimSpace(lines[next]))
+		i = next
+	}
+	return result
+}
+
+func nextNonBlankLine(lines []string, from int) int {
+	for i := from; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) != "" {
+			return i
+		}
+	}
+	return -1
+}
+
+func isMetadataValue(line string) bool {
+	if utf8.RuneCountInString(line) > maxMetadataValueLength {
+		return false
+	}
+	if reMetaLabelLead.MatchString(line) {
+		return false
+	}
+	lower := strings.ToLower(strings.Trim(line, ":– \t"))
+	if _, isSectionKeyword := sectionKeywords[lower]; isSectionKeyword {
+		return false
+	}
+	return !isKnownSectionHeader(lower)
 }
 
 func normalizeCurlyQuotes(s string) string {

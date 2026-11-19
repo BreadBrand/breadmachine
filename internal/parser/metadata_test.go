@@ -108,3 +108,36 @@ func TestExtractMetadata_Missing(t *testing.T) {
 			servings, prep, cook, additional)
 	}
 }
+
+func TestParseMinutes_DecimalsAndFractions(t *testing.T) {
+	cases := []struct {
+		in   string
+		want int
+	}{
+		{"1.5 hours", 90},
+		{"2.5 hours", 150},
+		{"0.5 hours", 30},
+		{"1.5 hrs", 90},
+		{"2.5 hours 10 minutes", 160},
+		{"1/2 hour", 30},
+		{"3/4 hour", 45},
+		{"2.5-3 hours", 150},
+		{"15 - 17 minutes", 15},
+		{"1–2 hours", 60},
+		{"1 hour 15 min", 75},
+	}
+	for _, c := range cases {
+		got := parseMinutes(c.in)
+		if got != c.want {
+			t.Errorf("parseMinutes(%q) = %d, want %d", c.in, got, c.want)
+		}
+	}
+}
+
+func TestExtractMetadata_LabelWithoutValueIsIgnored(t *testing.T) {
+	servings, prep, cook, additional := ExtractMetadata([]string{"Servings:", "Prep Time:", "Cook Time :", "Rise Time"})
+	if servings != "" || prep != 0 || cook != 0 || additional != 0 {
+		t.Errorf("expected nothing extracted from bare labels, got servings=%q prep=%d cook=%d additional=%d",
+			servings, prep, cook, additional)
+	}
+}

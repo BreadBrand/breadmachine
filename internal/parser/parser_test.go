@@ -267,3 +267,42 @@ func TestParse_SourdoughWonderBread_NamedSubsectionsPreservedVerbatim(t *testing
 		}
 	}
 }
+
+func TestParse_PalouseWholeWheatSourdough_MetadataOnSeparateLines(t *testing.T) {
+	dto, err := Parse(loadFixture(t, "palouse_whole_wheat_sourdough.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if dto.Servings != "5" {
+		t.Errorf("servings: expected %q, got %q", "5", dto.Servings)
+	}
+	if dto.PrepTime != 120 {
+		t.Errorf("prepTime: expected 120, got %d", dto.PrepTime)
+	}
+	if dto.CookTime != 150 {
+		t.Errorf("cookTime: expected 150, got %d", dto.CookTime)
+	}
+	if dto.AdditionalTime != 0 {
+		t.Errorf("additionalTime: expected 0, got %d", dto.AdditionalTime)
+	}
+
+	wantDescription := "Palouse Brand | Whole Wheat Sourdough Bread | Italian"
+	if dto.Description != wantDescription {
+		t.Errorf("description: expected %q, got %q", wantDescription, dto.Description)
+	}
+}
+
+func TestParse_MetadataLabelsInsideIngredientsDoNotBecomeIngredients(t *testing.T) {
+	dto, err := Parse("Bread\n\nIngredients\nPrep Time:\n20 mins\n500 g flour\nDirections\nBake it.\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(dto.DoughIngredients) != 1 {
+		t.Errorf("doughIngredients: expected 1, got %d: %+v", len(dto.DoughIngredients), dto.DoughIngredients)
+	}
+	if dto.PrepTime != 20 {
+		t.Errorf("prepTime: expected 20, got %d", dto.PrepTime)
+	}
+}

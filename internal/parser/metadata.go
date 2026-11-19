@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -10,18 +11,20 @@ var metadataPatterns = []struct {
 	field   string
 	pattern *regexp.Regexp
 }{
-	{"servings", regexp.MustCompile(`(?i)^(?:Servings?|Serves?)\s*:?\s*(.+)$`)},
-	{"servings", regexp.MustCompile(`(?i)^(?:Makes?|Yield)\s*:?\s*(.+)$`)},
-	{"prepTime", regexp.MustCompile(`(?i)^(?:Prep(?:aration)?\s*Time?)\s*:?\s*(.+)$`)},
-	{"prepTime", regexp.MustCompile(`(?i)^Prep\s*:?\s*(.+)$`)},
-	{"cookTime", regexp.MustCompile(`(?i)^(?:Cook(?:ing)?\s*Time?|Bak(?:ing|e)\s*Time?)\s*:?\s*(.+)$`)},
-	{"additionalTime", regexp.MustCompile(`(?i)^(?:Additional|Rise|Rest|Chill)\s*Time?\s*:?\s*(.+)$`)},
+	{"servings", regexp.MustCompile(`(?i)^(?:Servings?|Serves?)\b\s*:?\s*([^\s:].*)$`)},
+	{"servings", regexp.MustCompile(`(?i)^(?:Makes?|Yield)\b\s*:?\s*([^\s:].*)$`)},
+	{"prepTime", regexp.MustCompile(`(?i)^(?:Prep(?:aration)?\s*Time?)\b\s*:?\s*([^\s:].*)$`)},
+	{"prepTime", regexp.MustCompile(`(?i)^Prep\b\s*:?\s*([^\s:].*)$`)},
+	{"cookTime", regexp.MustCompile(`(?i)^(?:Cook(?:ing)?\s*Time?|Bak(?:ing|e)\s*Time?)\b\s*:?\s*([^\s:].*)$`)},
+	{"additionalTime", regexp.MustCompile(`(?i)^(?:Additional|Rise|Rest|Chill)\s*Time?\b\s*:?\s*([^\s:].*)$`)},
 }
 
+const timeAmount = `(\d+/\d+|\d+(?:\.\d+)?)`
+
 var (
-	reTimeHours   = regexp.MustCompile(`(?i)(\d+)\s*h(?:r|rs|our|ours)?`)
-	reTimeMinutes = regexp.MustCompile(`(?i)(\d+)\s*m(?:in|ins|inute|inutes)?`)
-	reTimeRange   = regexp.MustCompile(`(\d+)-\d+`)
+	reTimeHours   = regexp.MustCompile(`(?i)` + timeAmount + `\s*h(?:r|rs|our|ours)?`)
+	reTimeMinutes = regexp.MustCompile(`(?i)` + timeAmount + `\s*m(?:in|ins|inute|inutes)?`)
+	reTimeRange   = regexp.MustCompile(`(\d+(?:\.\d+)?)\s*[-–]\s*\d+(?:\.\d+)?`)
 )
 
 // parseMinutes converts a raw time string to an integer number of minutes.
@@ -29,14 +32,27 @@ var (
 // recognisable time value is found.
 func parseMinutes(s string) int {
 	s = reTimeRange.ReplaceAllString(s, "$1")
-	h, m := 0, 0
+	hours, minutes := 0.0, 0.0
 	if mh := reTimeHours.FindStringSubmatch(s); mh != nil {
-		h, _ = strconv.Atoi(mh[1])
+		hours = parseTimeAmount(mh[1])
 	}
 	if mm := reTimeMinutes.FindStringSubmatch(s); mm != nil {
-		m, _ = strconv.Atoi(mm[1])
+		minutes = parseTimeAmount(mm[1])
 	}
-	return h*60 + m
+	return int(math.Round(hours*60 + minutes))
+}
+
+func parseTimeAmount(token string) float64 {
+	if numerator, denominator, isFraction := strings.Cut(token, "/"); isFraction {
+		n, _ := strconv.ParseFloat(numerator, 64)
+		d, _ := strconv.ParseFloat(denominator, 64)
+		if d == 0 {
+			return 0
+		}
+		return n / d
+	}
+	value, _ := strconv.ParseFloat(token, 64)
+	return value
 }
 
 // ExtractMetadata parses metadata lines from Stage 2 into individual fields.
