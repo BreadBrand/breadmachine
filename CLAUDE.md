@@ -69,7 +69,7 @@ only — `OtherIngredients` (toppings/fillings) are never part of baker's math.
 design (see boundary rule below). `Parse()` in `parser.go` runs six stages in order, one file each:
 
 1. `normalise.go` — strip HTML/markdown, unescape entities, normalize curly quotes and unicode fractions,
-   combine mixed numbers ("2 3/4" → "2.75"), drop browser/print/nutrition-block/attribution noise, expand
+   combine mixed numbers ("2 3/4" → "2.75"), drop browser/print/nutrition-block/"tested by"/"reviewed by" noise, turn credit lines (`Author:`, `Recipe by`, `Submitted by`) into `Author: Name` metadata lines, expand
    inline `Key: Value Key: Value` metadata lines, and join a label-only line (`Prep Time:` or `Prep Time`)
    with the value on the next non-blank line into `Prep Time: 2 hours` (labels with no usable value are dropped).
 2. `sections.go` — splits into title / description / metadata lines / ingredient groups (each tagged with
@@ -78,7 +78,7 @@ design (see boundary rule below). `Parse()` in `parser.go` runs six stages in or
    vs. other by group phase, with any line containing "topping" forced to `other` regardless of phase.
 4. `instructions.go` — numbered/bulleted step extraction, disclaimer-line filtering (e.g. "results may
    vary").
-5. `metadata.go` — servings/prepTime/cookTime/additionalTime extraction; time values normalized to
+5. `metadata.go` — servings/prepTime/cookTime/additionalTime extraction (and `ExtractAuthor`, which ignores values over `MaxAuthorLength` runes); time values normalized to
    integer minutes (decimals like `2.5 hours`, simple fractions and ranges are understood).
 6. `confidence.go` — per-field 0.0–1.0 confidence score, using pessimistic min-stacking when multiple
    conditions hit the same field. Frontend should flag scores below 0.6 for user review.
@@ -137,10 +137,10 @@ sends. Concrete mismatches, verified against the frontend hooks (`UseFetchRecipe
 - **`RecipeDTO.prepTime` / `cookTime` / `additionalTime` are integers in minutes**, not strings.
   `types/dto.ts` types them as `string`; `types/models.ts`'s `Meta` has the same mismatch for the
   persisted `Recipe.meta` fields (also integers server-side, per `models/recipe.go`).
-- **Meta on save:** `POST /api/recipes` takes `meta.servings` (string) and `meta.prepTime` / `meta.cookTime` /
-  `meta.additionalTime` (integer minutes) inside `meta`, while `/parse` returns them at the top level of the
-  DTO. `handlers/meta.go` rejects times outside 0–10,080 minutes and servings over 100 characters with a
-  `400`.
+- **Meta on save:** `POST /api/recipes` takes `meta.servings` and `meta.author` (strings) and `meta.prepTime` /
+  `meta.cookTime` / `meta.additionalTime` (integer minutes) inside `meta`, while `/parse` returns them at the top
+  level of the DTO. `author` is the original recipe's credit, not the user who saved it (that is `userId`). `handlers/meta.go` rejects times outside 0–10,080 minutes and servings over 100 characters with a
+  `400`; `author` is also capped at 100 characters.
 - `RecipeDTO.otherIngredients` can be JSON `null` (Go nil slice) when empty — already modeled correctly
   in `types/dto.ts`.
 - `Ingredient.grams` is always present, lowercase, computed server-side at save time in every case — never

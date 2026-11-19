@@ -144,7 +144,7 @@ func TestCreateRecipe_Emulator_PersistsClientMeta(t *testing.T) {
 
 	reqBody := models.Recipe{
 		Title: "Meta Loaf",
-		Meta:  models.Meta{Servings: "5", PrepTime: 120, CookTime: 150, AdditionalTime: 30},
+		Meta:  models.Meta{Servings: "5", Author: "Jane Doe", PrepTime: 120, CookTime: 150, AdditionalTime: 30},
 	}
 	body, _ := json.Marshal(reqBody)
 	req := httptest.NewRequest(http.MethodPost, "/api/recipes", bytes.NewReader(body))
@@ -160,7 +160,7 @@ func TestCreateRecipe_Emulator_PersistsClientMeta(t *testing.T) {
 	if err := json.NewDecoder(w.Body).Decode(&created); err != nil {
 		t.Fatalf("failed to decode response: %v", err)
 	}
-	if created.Meta.Servings != "5" || created.Meta.PrepTime != 120 || created.Meta.CookTime != 150 || created.Meta.AdditionalTime != 30 {
+	if created.Meta.Servings != "5" || created.Meta.Author != "Jane Doe" || created.Meta.PrepTime != 120 || created.Meta.CookTime != 150 || created.Meta.AdditionalTime != 30 {
 		t.Errorf("meta not preserved: %+v", created.Meta)
 	}
 
@@ -172,8 +172,8 @@ func TestCreateRecipe_Emulator_PersistsClientMeta(t *testing.T) {
 	if err := docSnap.DataTo(&stored); err != nil {
 		t.Fatalf("failed to read stored recipe: %v", err)
 	}
-	if stored.Meta.PrepTime != 120 || stored.Meta.CookTime != 150 {
-		t.Errorf("stored meta times: want prep=120 cook=150, got %+v", stored.Meta)
+	if stored.Meta.PrepTime != 120 || stored.Meta.CookTime != 150 || stored.Meta.Author != "Jane Doe" {
+		t.Errorf("stored meta: want prep=120 cook=150 author=Jane Doe, got %+v", stored.Meta)
 	}
 }
 

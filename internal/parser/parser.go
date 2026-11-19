@@ -33,6 +33,7 @@ func Parse(input string) (RecipeDTO, error) {
 		DoughIngredients: dough,
 		OtherIngredients: other,
 		Servings:         servings,
+		Author:           ExtractAuthor(sm.MetadataLines),
 		PrepTime:         prepTime,
 		CookTime:         cookTime,
 		AdditionalTime:   additionalTime,

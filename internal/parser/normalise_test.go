@@ -128,17 +128,58 @@ func TestNormalise_MixedNumbers_DoesNotAlterType00Flour(t *testing.T) {
 
 func TestNormalise_AttributionLines(t *testing.T) {
 	cases := []string{
-		"Submitted by Terri McCarrell",
 		"Tested by Allrecipes Test Kitchen",
 		"Reviewed by staff",
-		"Recipe by John",
-		"Author: Emilie Raffa",
 	}
 	for _, line := range cases {
 		got, _ := Normalise(line)
 		if strings.TrimSpace(got) != "" {
 			t.Errorf("attribution line not stripped: Normalise(%q) = %q", line, got)
 		}
+	}
+}
+
+func TestNormalise_CreditLinesBecomeAuthorMetadata(t *testing.T) {
+	cases := map[string]string{
+		"Submitted by Terri McCarrell":  "Author: Terri McCarrell",
+		"submitted by: Terri McCarrell": "Author: Terri McCarrell",
+		"Recipe by John":                "Author: John",
+		"Recipe by: John Smith":         "Author: John Smith",
+		"RECIPE BY John Smith":          "Author: John Smith",
+		"Author: Emilie Raffa":          "Author: Emilie Raffa",
+		"Author:Emilie Raffa":           "Author: Emilie Raffa",
+	}
+	for line, want := range cases {
+		got, _ := Normalise("Bread\n" + line + "\nIngredients\n500 g flour")
+		wantFull := "Bread\n" + want + "\nIngredients\n500 g flour"
+		if got != wantFull {
+			t.Errorf("Normalise(%q):\ngot:\n%s\nwant:\n%s", line, got, wantFull)
+		}
+	}
+}
+
+func TestNormalise_AuthorLabelJoinedWithNameOnNextLine(t *testing.T) {
+	got, _ := Normalise("Bread\nAuthor:\nJane Doe\nIngredients\n500 g flour")
+	want := "Bread\nAuthor: Jane Doe\nIngredients\n500 g flour"
+	if got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestNormalise_CreditLineWithoutNameIsDropped(t *testing.T) {
+	for _, line := range []string{"Recipe by", "Submitted by:", "Recipe by  "} {
+		got, _ := Normalise("Bread\n" + line + "\nIngredients\n500 g flour")
+		if got != "Bread\nIngredients\n500 g flour" {
+			t.Errorf("Normalise(%q) kept a nameless credit:\n%s", line, got)
+		}
+	}
+}
+
+func TestNormalise_AuthorInInlineMetadataStillSplit(t *testing.T) {
+	got, _ := Normalise("Author: Emilie Raffa Prep Time: 12 hours Cook Time: 50 minutes")
+	want := "Author: Emilie Raffa\nPrep Time: 12 hours\nCook Time: 50 minutes"
+	if got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
 

@@ -14,6 +14,8 @@ func TestValidateMeta_Accepts(t *testing.T) {
 		"at the time cap":  {PrepTime: maxMetaMinutes, CookTime: maxMetaMinutes, AdditionalTime: maxMetaMinutes},
 		"servings at cap":  {Servings: strings.Repeat("a", maxServingsLength)},
 		"servings as text": {Servings: "2 loaves"},
+		"author":           {Author: "Jane Doe"},
+		"author at cap":    {Author: strings.Repeat("a", maxAuthorLength)},
 	}
 	for name, meta := range cases {
 		if err := validateMeta(meta); err != nil {
@@ -31,6 +33,7 @@ func TestValidateMeta_Rejects(t *testing.T) {
 		"cook over cap":       {CookTime: maxMetaMinutes + 1},
 		"additional over cap": {AdditionalTime: maxMetaMinutes + 1},
 		"servings too long":   {Servings: strings.Repeat("a", maxServingsLength+1)},
+		"author too long":     {Author: strings.Repeat("a", maxAuthorLength+1)},
 	}
 	for name, meta := range cases {
 		if err := validateMeta(meta); err == nil {

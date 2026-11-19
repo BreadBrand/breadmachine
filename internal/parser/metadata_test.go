@@ -1,6 +1,9 @@
 package parser
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestParseMinutes(t *testing.T) {
 	cases := []struct {
@@ -139,5 +142,28 @@ func TestExtractMetadata_LabelWithoutValueIsIgnored(t *testing.T) {
 	if servings != "" || prep != 0 || cook != 0 || additional != 0 {
 		t.Errorf("expected nothing extracted from bare labels, got servings=%q prep=%d cook=%d additional=%d",
 			servings, prep, cook, additional)
+	}
+}
+
+func TestExtractAuthor(t *testing.T) {
+	cases := []struct {
+		name  string
+		lines []string
+		want  string
+	}{
+		{"plain", []string{"Author: Jane Doe"}, "Jane Doe"},
+		{"no space after colon", []string{"Author:Jane Doe"}, "Jane Doe"},
+		{"case insensitive", []string{"AUTHOR: Jane Doe"}, "Jane Doe"},
+		{"among other metadata", []string{"Prep Time: 20 mins", "Author: Jane Doe", "Servings: 4"}, "Jane Doe"},
+		{"first one wins", []string{"Author: Jane Doe", "Author: John Smith"}, "Jane Doe"},
+		{"label without a name", []string{"Author:"}, ""},
+		{"no author line", []string{"Prep Time: 20 mins", "500g flour"}, ""},
+		{"too long to be a name", []string{"Author: " + strings.Repeat("a", MaxAuthorLength+1)}, ""},
+		{"exactly the length limit", []string{"Author: " + strings.Repeat("a", MaxAuthorLength)}, strings.Repeat("a", MaxAuthorLength)},
+	}
+	for _, c := range cases {
+		if got := ExtractAuthor(c.lines); got != c.want {
+			t.Errorf("%s: ExtractAuthor(%q) = %q, want %q", c.name, c.lines, got, c.want)
+		}
 	}
 }

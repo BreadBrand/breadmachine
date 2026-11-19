@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 var metadataPatterns = []struct {
@@ -18,6 +19,10 @@ var metadataPatterns = []struct {
 	{"cookTime", regexp.MustCompile(`(?i)^(?:Cook(?:ing)?\s*Time?|Bak(?:ing|e)\s*Time?)\b\s*:?\s*([^\s:].*)$`)},
 	{"additionalTime", regexp.MustCompile(`(?i)^(?:Additional|Rise|Rest|Chill)\s*Time?\b\s*:?\s*([^\s:].*)$`)},
 }
+
+const MaxAuthorLength = 100
+
+var reAuthor = regexp.MustCompile(`(?i)^Author\b\s*:?\s*([^\s:].*)$`)
 
 const timeAmount = `(\d+/\d+|\d+(?:\.\d+)?)`
 
@@ -88,4 +93,19 @@ func ExtractMetadata(lines []string) (servings string, prepTime, cookTime, addit
 		}
 	}
 	return
+}
+
+func ExtractAuthor(lines []string) string {
+	for _, line := range lines {
+		match := reAuthor.FindStringSubmatch(strings.TrimSpace(line))
+		if match == nil {
+			continue
+		}
+		author := strings.TrimSpace(match[1])
+		if utf8.RuneCountInString(author) > MaxAuthorLength {
+			return ""
+		}
+		return author
+	}
+	return ""
 }

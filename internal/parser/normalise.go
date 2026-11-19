@@ -27,6 +27,7 @@ var (
 	reScalingArtifact   = regexp.MustCompile(`\b\d+x\b`)
 	reBrowserHeader     = regexp.MustCompile(`^\d{1,2}/\d{1,2}/\d{2,4},\s+\d{1,2}:\d{2}\s+(AM|PM)\s+`)
 	rePageFraction      = regexp.MustCompile(`^about:blank\s+\d+/\d+$`)
+	reAuthorCredit      = regexp.MustCompile(`(?i)^(?:author\s*:|recipe\s+by\b\s*:?|submitted\s+by\b\s*:?)\s*(.*)$`)
 	reMetaLabelOnly     = regexp.MustCompile(`(?i)^(` + metaLabels + `)\s*:?\s*$`)
 	reMetaLabelLead     = regexp.MustCompile(`(?i)^(` + metaLabels + `)\b`)
 	reMetadataPair      = regexp.MustCompile(`(?i)(Prep Time|Cook Time|Total Time|Additional Time|Servings|Yield|Category|Cuisine|Diet|Author)\s*:\s*[^\s]`)
@@ -45,7 +46,7 @@ var recipeCardUILines = map[string]bool{
 }
 
 var attributionPrefixes = []string{
-	"submitted by", "tested by", "reviewed by", "recipe by", "author:",
+	"tested by", "reviewed by",
 }
 
 var sourcePrefixes = []string{
@@ -160,6 +161,18 @@ func Normalise(input string) (string, error) {
 			if isKnownSectionHeader(lower) {
 				inNutritionBlock = false
 				out = append(out, line)
+			}
+			continue
+		}
+
+		if credit := reAuthorCredit.FindStringSubmatch(trimmedLine); credit != nil &&
+			len(reMetadataPair.FindAllStringIndex(line, -1)) < 2 {
+			name := strings.TrimSpace(credit[1])
+			switch {
+			case name != "":
+				out = append(out, "Author: "+name)
+			case strings.HasPrefix(lower, "author"):
+				out = append(out, "Author:")
 			}
 			continue
 		}

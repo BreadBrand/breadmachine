@@ -42,6 +42,7 @@ type Meta struct {
 	UpdatedAt      time.Time `json:"updatedAt" firestore:"updatedAt"`
 	Tags           []string  `json:"tags,omitempty" firestore:"tags,omitempty"`
 	Servings       string    `json:"servings,omitempty" firestore:"servings,omitempty"`
+	Author         string    `json:"author,omitempty" firestore:"author,omitempty"`
 	PrepTime       int       `json:"prepTime,omitempty" firestore:"prepTime,omitempty"`
 	CookTime       int       `json:"cookTime,omitempty" firestore:"cookTime,omitempty"`
 	AdditionalTime int       `json:"additionalTime,omitempty" firestore:"additionalTime,omitempty"`
